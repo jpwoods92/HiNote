@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Highlight & Note",
+  "version": "1.0.0",
+  "description": "Local-first knowledge management.",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Side Panel"
+  },
+  "background": {
+    "service_worker": "assets/background.js" 
+  }
+}
