@@ -1,30 +1,29 @@
 import Dexie, { type Table } from "dexie";
 
-export interface Page {
-  normalizedUrl: string;
-  lastVisited: number; // Timestamp
+export interface NoteAnchor {
+  xpath: string;
+  text: string;
+  prefix: string;
+  suffix: string;
+  color: string;
 }
 
 export interface Note {
-  id: string; // UUID
+  id: string;
   url: string;
-  content: string;
-  tags: string[];
+  anchor: NoteAnchor;
   createdAt: number;
 }
 
-export class ClickNoteDB extends Dexie {
-  pages!: Table<Page, string>; // Primary key is string (normalizedUrl)
-  notes!: Table<Note, string>; // Primary key is string (UUID)
+export class HighlightNoteDB extends Dexie {
+  notes!: Table<Note>;
 
   constructor() {
-    super("ClickNoteDB");
-
+    super("HighlightNoteDB");
     this.version(1).stores({
-      pages: "normalizedUrl, lastVisited",
-      notes: "id, url, *tags", // *tags indicates a multi-entry index
+      notes: "id, url, createdAt",
     });
   }
 }
 
-export const db = new ClickNoteDB();
+export const db = new HighlightNoteDB();

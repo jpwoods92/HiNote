@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:chrome": "tsc -b && vite build && shx cp public/manifests/manifest.chrome.json dist/manifest.json",
+    "build": "vite build",
+    "build:chrome": "vite build",
     "build:firefox": "tsc -b && vite build && shx cp public/manifests/manifest.firefox.json dist/manifest.json",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -21,6 +21,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.23",
     "@eslint/js": "^9.39.1",
     "@types/chrome": "^0.1.36",
     "@types/node": "^24.10.1",

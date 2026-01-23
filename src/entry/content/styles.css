@@ -1,0 +1,18 @@
+/* The visual style for the highlighted text */
+.ext-highlight {
+  background-color: rgba(255, 255, 0, 0.5) !important; /* Yellow with transparency */
+  mix-blend-mode: multiply; /* Allows overlapping highlights to darken */
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+/* Ensure our root container doesn't interfere with page layout */
+#highlight-note-root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  z-index: 2147483647; /* Max Z-Index */
+}
