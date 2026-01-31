@@ -7,6 +7,8 @@ import { db } from "../db";
 import { Editor } from "./Editor";
 import { Trash2, Link2Off } from "lucide-react";
 import { stripHtml } from "@/utils/sidepanel";
+import NoteTags from "./NoteTags";
+
 
 interface NoteCardProps {
   note: Note;
@@ -119,6 +121,7 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
           </button>
         </div>
       )}
+      <NoteTags noteId={note.id} initialTags={note.content.tags || []} />
     </div>
   );
 }

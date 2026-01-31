@@ -25,6 +25,15 @@ export class HighlightManager {
   }
 
   async initialize() {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith("#ext-focus=")) {
+        const id = hash.substring("#ext-focus=".length);
+        this.scrollToHighlight(id);
+        window.location.hash = "";
+      }
+    };
+
     // Listen for messages from the side panel
     onMessage(
       (
@@ -56,6 +65,12 @@ export class HighlightManager {
 
     // Re-hydrate on load
     await this.restoreHighlights();
+
+    // Handle initial hash
+    handleHash();
+
+    // Listen for hash changes
+    window.addEventListener("hashchange", handleHash);
 
     // Listen for URL changes (SPA navigation)
     let lastUrl = location.href;

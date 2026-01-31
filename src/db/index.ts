@@ -47,8 +47,12 @@ export class HighlightNoteDB extends Dexie {
     this.version(2).stores({
       notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted",
     });
-    this.version(3).stores({
-      notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted",
+    this.version(4).stores({
+      notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted, *content.tags",
+      pages: "normalizedUrl, lastVisit, *tags",
+    });
+    this.version(5).stores({
+      notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted, *content.tags, content.text, anchor.quote",
       pages: "normalizedUrl, lastVisit, *tags",
     });
   }
