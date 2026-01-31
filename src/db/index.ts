@@ -3,25 +3,53 @@ import Dexie, { type Table } from "dexie";
 export interface NoteAnchor {
   xpath: string;
   text: string;
+  quote: string;
   prefix: string;
   suffix: string;
   color: string;
+  style: string;
 }
 
 export interface Note {
   id: string;
   url: string;
+  normalizedUrl: string;
   anchor: NoteAnchor;
+  content: {
+    text: string;
+    html: string;
+    tags: string[];
+  };
+  isOrphaned?: boolean;
+  isDeleted?: boolean;
   createdAt: number;
+  updatedAt: number;
+}
+
+export interface Page {
+  normalizedUrl: string;
+  title: string;
+  favicon?: string;
+  noteCount: number;
+  lastVisit: number;
+  tags: string[];
 }
 
 export class HighlightNoteDB extends Dexie {
   notes!: Table<Note>;
+  pages!: Table<Page>;
 
   constructor() {
     super("HighlightNoteDB");
     this.version(1).stores({
       notes: "id, url, createdAt",
+    });
+    this.version(2).stores({
+      notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted",
+    });
+    this.version(3).stores({
+      notes: "id, url, normalizedUrl, createdAt, updatedAt, isDeleted",
+      pages: "normalizedUrl, lastVisit, *tags",
     });
   }
 }

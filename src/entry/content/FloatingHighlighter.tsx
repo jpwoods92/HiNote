@@ -36,42 +36,65 @@ export const FloatingHighlighter: React.FC = () => {
       });
     };
 
+    const handleMouseUp = () => {
+      // We need a small delay for the selection to be stable
+      setTimeout(handleSelectionChange, 10);
+    }
+    
     // Listen to mouseup to settle the selection
-    document.addEventListener('mouseup', handleSelectionChange);
-    document.addEventListener('keyup', handleSelectionChange); // For keyboard selection
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Hide on scroll
+    const handleScroll = () => setPosition(null);
+    document.addEventListener('scroll', handleScroll);
 
     return () => {
-      document.removeEventListener('mouseup', handleSelectionChange);
-      document.removeEventListener('keyup', handleSelectionChange);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+
+  const handleHighlightClick = async () => {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      await highlightManager.createHighlight("", selection.getRangeAt(0));
+    }
+    // Hide the button and clear the selection
+    setPosition(null);
+    selection?.removeAllRanges();
+  };
 
   if (!position) return null;
 
   return (
-    <button
-      onClick={async () => {
-        await highlightManager.createHighlight();
-        setPosition(null);
-      }}
+    <div
       style={{
         position: 'absolute',
         left: position.x,
         top: position.y,
         transform: 'translateX(-50%)',
         zIndex: 99999,
-        padding: '8px 16px',
-        backgroundColor: '#333',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-        fontWeight: 'bold',
-        fontSize: '14px'
       }}
+      // Prevent mouseup on the button from clearing the selection before it can be used
+      onMouseDown={(e) => e.preventDefault()}
     >
-      Highlight
-    </button>
+      <button
+        onClick={() => void handleHighlightClick()}
+        style={{
+          padding: '8px 16px',
+          backgroundColor: '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+          fontWeight: 'bold',
+          fontSize: '14px'
+        }}
+      >
+        Highlight
+      </button>
+    </div>
   );
 };

@@ -1,18 +1,59 @@
-import { db, type Note } from "../../db";
+import { type Note } from "../../db";
+import {
+  onMessage,
+  sendMessage,
+  Message,
+  ScrollToHighlightPayload,
+  RemoveHighlightPayload,
+  EnterRelinkModePayload,
+  GetNotesForUrlPayload,
+  GetNotePayload,
+  GetNoteResponse,
+} from "../../utils/messaging";
+import { normalizeUrl } from "../../utils/url";
 import {
   getXPath,
   getNodeByXPath,
-  highlightRange,
+  highlightRange as highlightRangeUtil,
   findRangeByFuzzyMatch,
   getContext,
 } from "../../utils/dom";
 
 export class HighlightManager {
   constructor() {
-    this.initialize();
+    void this.initialize();
   }
 
   async initialize() {
+    // Listen for messages from the side panel
+    onMessage(
+      (
+        message: Message<
+          | ScrollToHighlightPayload
+          | RemoveHighlightPayload
+          | EnterRelinkModePayload
+        >,
+      ) => {
+        switch (message.type) {
+          case "SCROLL_TO_HIGHLIGHT":
+            this.scrollToHighlight(
+              (message.payload as ScrollToHighlightPayload).id,
+            );
+            break;
+          case "REMOVE_HIGHLIGHT":
+            this.removeHighlight(
+              (message.payload as RemoveHighlightPayload).id,
+            );
+            break;
+          case "ENTER_RELINK_MODE":
+            void this.enterRelinkMode(
+              (message.payload as EnterRelinkModePayload).id,
+            );
+            break;
+        }
+      },
+    );
+
     // Re-hydrate on load
     await this.restoreHighlights();
 
@@ -22,47 +63,80 @@ export class HighlightManager {
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
-        this.restoreHighlights();
+        void this.restoreHighlights();
       }
     }).observe(document, { subtree: true, childList: true });
   }
 
   /**
    * Creates a highlight from the current selection, saves it, and paints it.
+   * @param content Optional note content
+   * @param range Optional range to highlight (defaults to current selection)
    */
-  async createHighlight() {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+  async createHighlight(content?: string, range?: Range) {
+    let targetRange = range;
 
-    const range = selection.getRangeAt(0);
-    const text = range.toString();
+    if (!targetRange) {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      targetRange = selection.getRangeAt(0);
+    }
+
+    const text = targetRange.toString();
     if (!text.trim()) return;
 
     const id = crypto.randomUUID();
-    const { prefix, suffix } = getContext(range);
-    const xpath = getXPath(range.startContainer);
+    const { prefix, suffix } = getContext(targetRange);
+    const xpath = getXPath(targetRange.startContainer);
+    const now = Date.now();
+    const currentUrl = window.location.href;
 
     const note: Note = {
       id,
-      url: window.location.href,
-      createdAt: Date.now(),
+      url: currentUrl,
+      normalizedUrl: normalizeUrl(currentUrl),
+      createdAt: now,
+      updatedAt: now,
       anchor: {
         xpath,
         text,
+        quote: text,
         prefix,
         suffix,
         color: "yellow",
+        style: "solid",
       },
+      content: {
+        text: content || "",
+        html: content ? `<p>${content}</p>` : "",
+        tags: [],
+      },
+      isDeleted: false,
+      isOrphaned: false,
     };
 
     // 1. Paint immediately
-    highlightRange(range, id);
+    const wrappers = highlightRangeUtil(targetRange, id);
+    wrappers.forEach((wrapper) => {
+      wrapper.addEventListener("click", () => {
+        void sendMessage({
+          type: "FOCUS_NOTE",
+          payload: { id },
+        });
+      });
+    });
 
     // 2. Clear selection for feedback
-    selection.removeAllRanges();
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+    }
 
     // 3. Persist
-    await db.notes.add(note);
+    await sendMessage({
+      type: "CREATE_NOTE",
+      payload: note,
+    });
     console.log("Highlight saved:", id);
   }
 
@@ -70,10 +144,11 @@ export class HighlightManager {
    * Restores highlights for the current URL from IndexedDB.
    */
   async restoreHighlights() {
-    const notes = await db.notes
-      .where("url")
-      .equals(window.location.href)
-      .toArray();
+    const currentUrl = window.location.href;
+    const notes: Note[] = await sendMessage<GetNotesForUrlPayload, Note[]>({
+      type: "GET_NOTES_FOR_URL",
+      payload: { url: currentUrl },
+    });
 
     for (const note of notes) {
       let range: Range | null = null;
@@ -99,11 +174,136 @@ export class HighlightManager {
       }
 
       if (range) {
-        highlightRange(range, note.id);
+        const wrappers = highlightRangeUtil(range, note.id);
+        wrappers.forEach((wrapper) => {
+          wrapper.addEventListener("click", () => {
+            void sendMessage({
+              type: "FOCUS_NOTE",
+              payload: { id: note.id },
+            });
+          });
+        });
+        if (note.isOrphaned) {
+          void sendMessage({
+            type: "UPDATE_NOTE_STATUS",
+            payload: { id: note.id, isOrphaned: false },
+          });
+        }
       } else {
         console.warn("Orphaned Note:", note.id, note.anchor.text);
+        if (!note.isOrphaned) {
+          void sendMessage({
+            type: "UPDATE_NOTE_STATUS",
+            payload: { id: note.id, isOrphaned: true },
+          });
+        }
       }
     }
+  }
+
+  /**
+   * Scrolls the page to the given highlight.
+   */
+  scrollToHighlight(id: string) {
+    const highlight = document.querySelector(`[data-highlight-id="${id}"]`);
+    if (highlight) {
+      highlight.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Flash the highlight
+      highlight.classList.add("flash");
+      setTimeout(() => {
+        highlight.classList.remove("flash");
+      }, 1000);
+    }
+  }
+
+  /**
+   * Removes a highlight from the DOM.
+   */
+  removeHighlight(id: string) {
+    const highlights = document.querySelectorAll(`[data-highlight-id="${id}"]`);
+    highlights.forEach((highlight) => {
+      const parent = highlight.parentNode;
+      if (parent) {
+        while (highlight.firstChild) {
+          parent.insertBefore(highlight.firstChild, highlight);
+        }
+        parent.removeChild(highlight);
+      }
+    });
+  }
+
+  /**
+   * Enters re-link mode.
+   */
+  async enterRelinkMode(id: string) {
+    const note: GetNoteResponse = await sendMessage<
+      GetNotePayload,
+      GetNoteResponse
+    >({
+      type: "GET_NOTE",
+      payload: { id },
+    });
+    if (!note) return;
+
+    document.body.style.cursor = "crosshair";
+    const toast = document.createElement("div");
+    toast.textContent = "Select text to re-attach note...";
+    toast.style.position = "fixed";
+    toast.style.top = "10px";
+    toast.style.left = "50%";
+    toast.style.transform = "translateX(-50%)";
+    toast.style.backgroundColor = "rgba(0,0,0,0.7)";
+    toast.style.color = "white";
+    toast.style.padding = "10px 20px";
+    toast.style.borderRadius = "5px";
+    toast.style.zIndex = "99999";
+    document.body.appendChild(toast);
+
+    const handleSelection = async () => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const text = range.toString();
+        if (text.trim()) {
+          const { prefix, suffix } = getContext(range);
+          const xpath = getXPath(range.startContainer);
+          const newAnchor = {
+            ...note.anchor,
+            xpath,
+            text,
+            quote: text,
+            prefix,
+            suffix,
+          };
+          await sendMessage({
+            type: "UPDATE_NOTE_ANCHOR",
+            payload: { id, anchor: newAnchor },
+          });
+          const wrappers = highlightRangeUtil(range, id);
+          wrappers.forEach((wrapper) => {
+            wrapper.addEventListener("click", () => {
+              void sendMessage({
+                type: "FOCUS_NOTE",
+                payload: { id },
+              });
+            });
+          });
+          void sendMessage({
+            type: "RELINK_SUCCESS",
+            payload: { id },
+          });
+          document.body.style.cursor = "default";
+          document.body.removeChild(toast);
+        }
+      }
+    };
+    window.addEventListener(
+      "mouseup",
+      () => {
+        void handleSelection();
+      },
+      { once: true },
+    );
   }
 }
 
