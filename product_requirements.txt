@@ -1,28 +1,3 @@
-Analysis & Suggestions
-
-Here are the answers to your specific technical questions, followed by the revised requirements and data schema.
-1. "Are there any libraries to punt to these services directly?"
-
-Yes. You should not write raw fetch calls if you can avoid it.
-
-    The "Meta" Library: LangChain.js is the industry standard here. It supports OpenAI, Anthropic, and Google Vertex AI out of the box. It handles the connection logic, streaming, and even "prompt templates" for you.
-
-    The "Native" Option (Strongly Recommended): Chrome is rolling out Gemini Nano built directly into the browser.
-
-        Why: It requires zero API keys from the user, zero cost, and works offline.
-
-        Strategy: Use Gemini Nano for "Summarization" (free/fast). Use the user's OpenAI/Claude key only for complex tasks (like "Explain this in detail").
-
-2. Security of "Bring Your Own Key" (BYOK)
-
-If the user provides the key, you do not need a backend proxy. A proxy is only needed if you (the developer) are paying for the key and want to hide it.
-
-    Storage: Store the key in chrome.storage.local. Never use chrome.storage.sync (which uploads it to Google Cloud).
-
-    Encryption: For an MVP, "At Rest" encryption is often overkill for a BYOK tool, but you must warn the user: "Your API Key is stored only on this device. If you uninstall the extension, it is deleted."
-
-Revised Product Requirements Document (PRD)
-
 Project: Highlight & Note Extension Tech Stack: Chrome Side Panel API + IndexedDB + LangChain.js
 1. Core Architecture
 
@@ -38,123 +13,84 @@ Project: Highlight & Note Extension Tech Stack: Chrome Side Panel API + IndexedD
 
         Note: Shared logic, separate manifest.json configurations.
 
-2. The Highlighter (Front-End)
+2. The Highlighter (Front-End) & Configuration
 
-    Creation: User selects text -> Floating Menu -> Select Color.
+    Creation & Palette:
 
-    Collision Handling:
+        Interaction: User selects text -> Floating Menu appears.
+
+        Dynamic Palette: The Floating Menu displays a user-configurable set of color swatches (defined in Settings).
+
+    On-the-Fly Editing:
+
+        Edit Existing: Clicking an existing highlight opens a "Mini-Editor" popover allowing immediate color swapping or deletion without opening the side panel.
+
+        Opacity Control: Users can adjust opacity globally or per-highlight to ensure text readability on dark-mode websites.
+
+    Collision Handling (Stacks & Overlaps):
 
         Visuals: Newer highlights overlay older ones.
 
-        Interaction: Hovering a "stack" displays a "Cluster Bubbles" UI—a small row of colored dots above the text. Hovering a dot isolates that specific highlight's note.
+        Cluster Bubbles UI: Hovering a section with overlapping highlights displays a row of colored dots (Cluster Bubbles) above the text.
+
+        Layer Editing:
+
+            Hovering a specific dot in the cluster isolates that highlight.
+
+            New Requirement: Right-clicking a dot in the cluster allows the user to change only that layer's color.
 
     Robust Re-attachment (Fuzzy Matching):
 
-        Store Exact Match: The selected text.
-
-        Store Location: XPath or CSS Selector.
-
-        Store Context (Anchor): The 30 characters before and 30 characters after the selection.
+        Store Exact Match (text), Location (XPath), and Context (30 chars before/after).
 
         Logic: On page load, if exact location fails, search the DOM for the Context + Text pattern to re-anchor the highlight.
 
 3. Note Management (Side Panel)
 
-    Navigation:
+    Contextual Views:
 
-        Page Mode: Shows notes for the current URL.
+        Page Mode: Displays notes only for the current active URL.
 
-        Global Search: A search bar to query all notes in IndexedDB.
+        Global Mode (New Tab): A unified list of all notes stored in IndexedDB, sorted by date (newest first).
 
-            Result Behavior: Clicking a search result opens the original URL in a new tab (or focuses it if open) and scrolls to the highlight.
+    Global Search & Filter:
+
+        Universal Search Bar: Filters the Global List by matching text content, anchor text, or tags.
+
+        Tag Filtering: A dashboard view to filter the global list by specific tags.
+
+    Deep Navigation (The "Jump" Logic):
+
+        Behavior: Clicking a note card in Global Mode triggers a "Deep Link".
+
+        Logic: Check if the URL is open; if so, focus it. If not, open a new tab.
+
+        Final Step: Once the page loads, automatically scroll to and flash the specific highlighted element.
 
     Orphan Management:
 
-        If re-attachment fails entirely: Note is flagged "Orphaned."
-
-        Re-assign Mode: Clicking "Re-assign" minimizes the note, waits for the user to select new text on the page, and updates the note's anchors to the new selection.
-
-    Tags:
-
-        Created via dropdown/input in the Note Editor.
-
-        Managed via a "Tag Dashboard" view in the Side Panel (Filter by Tag, Rename Tag, Delete Tag).
+        Notes that cannot be re-attached are flagged; users can initiate "Re-assign Mode" to fix links.
 
 4. AI Features (Hybrid Model)
 
-    Tier 1 (Local/Free): Use Chrome Built-in AI (Gemini Nano) for "Summarize Selection" and "Suggest Tags." (Privacy-first, no setup).
+    Tier 1 (Local/Free): Use Chrome Built-in AI (Gemini Nano) for "Summarize Selection" and "Suggest Tags".
 
-    Tier 2 (Cloud/BYOK): User provides OpenAI/Anthropic Key in Settings.
+    Tier 2 (Cloud/BYOK): User provides OpenAI/Anthropic Key in Settings. Keys stored in chrome.storage.local only.
 
-        Enables "Ask questions about this highlight" or "Compare with other notes."
+5. Data Structures (JSON Schema)
 
-        Security: Keys stored in chrome.storage.local only.
+    Notes Table: Stores id, url, normalizedUrl, content (HTML/Text), and tags.
 
+    Anchor Data: Stores text, quote, prefix, suffix, xpath, color.
 
+    Pages Table: Metadata for the Global Dashboard (title, favicon, noteCount).
 
+    Settings (localStorage):
+    JSON
 
-Data Structures (JSON Schema)
-
-We will use Dexie.js (a standard IndexedDB wrapper) schema style for clarity.
-1. Notes Table
-
-Primary Source of Truth. Optimized for querying by URL or ID.
-
-{
-  "id": "uuid-v4",
-  "url": "https://developer.mozilla.org/en-US/docs/Web/API",
-  "normalizedUrl": "https://developer.mozilla.org/en-US/docs/Web/API", // Stripped of tracking params
-  "createdAt": 1716384000000,
-  "updatedAt": 1716384055000,
-
-  // The Anchor Data (Critical for Fuzzy Matching)
-  "anchor": {
-    "text": "The select() method determines whether...", // The actual highlighted text
-    "quote": "The select() method determines whether...", // Copy for display (in case page changes)
-    "prefix": "input or textarea element. ", // 30 chars BEFORE
-    "suffix": " the text is selected.", // 30 chars AFTER
-    "xpath": "/html/body/div[1]/p[3]", // Best-effort location
-    "color": "yellow",
-    "style": "solid" // Future proofing (underline, highlight, etc)
-  },
-
-  // User Content
-  "content": {
-    "text": "This is the key method for the input ref.", // Plain text
-    "html": "This is the <b>key method</b>...", // Rich text (sanitized)
-    "tags": ["frontend", "javascript", "dom"]
-  },
-
-  // State
-  "isOrphaned": false,
-  "isDeleted": false // Soft delete allows "Undo"
-}
-
-
-2. Pages Table
-
-Metadata for the Global Dashboard. Allows rendering the "History" list without loading every single note.
-
-{
-  "normalizedUrl": "https://developer.mozilla.org/en-US/docs/Web/API",
-  "title": "Web APIs | MDN",
-  "favicon": "data:image/png;base64...",
-  "noteCount": 5,
-  "lastVisit": 1716384000000,
-  "tags": ["frontend", "javascript"] // Aggregate of all tags on this page
-}
-
-3. Settings (Stored in localStorage, not IndexedDB)
-
-{
-  "theme": "system",
-  "ai": {
-    "provider": "openai", // or 'anthropic', 'chrome-local'
-    "model": "gpt-4o",
-    "apiKey": "sk-proj-..." // Stored plainly in local storage (User warned)
-  },
-  "backup": {
-    "lastExport": 1716384000000
-  }
-}
-
+    {
+      "theme": "system",
+      "customPalette": ["#FFFF00", "#FF00FF", "#00FF00", "#00FFFF"], // User defined colors
+      "defaultOpacity": 0.5,
+      "ai": { "provider": "openai", "apiKey": "..." }
+    }

@@ -2,166 +2,96 @@ Phase 1: Foundation & Architecture (Weeks 1-2)
 
 Goal: Establish the extension shell, storage engine, and side panel infrastructure.
 
-    Repository & Build Setup:
+    Build Setup: Initialize Monorepo with Vite/Webpack for separate Chrome (sidePanel) and Firefox (sidebar_action) manifests.
 
-        Initialize a Monorepo or standard structure compatible with both Chrome (Manifest V3) and Firefox.
+    Permissions: Request sidePanel, activeTab, scripting, storage, and unlimitedStorage.
 
-        Set up a build tool (Vite or Webpack) to compile separate manifests: manifest.chrome.json (using sidePanel) and manifest.firefox.json (using sidebar_action).
+    Database: Initialize Dexie.js with pages and notes tables.
 
-    Manifest V3 Configuration:
-
-        Permissions: Request sidePanel, activeTab, scripting, storage (for settings), and unlimitedStorage (for IndexedDB).
-
-        Host Permissions: <all_urls> (required to inject highlighters on any page).
-
-    Database Initialization (Dexie.js):
-
-        Install Dexie.js.
-
-        Define the schema Version 1:
-
-            pages: Primary Key normalizedUrl.
-
-            notes: Primary Key id (UUID), Index url.
-
-        Implement a "Database Service" class to handle CRUD operations abstractly.
-
-    Side Panel "Hello World":
-
-        Create a basic React/Vue/HTML page that loads in the side panel.
-
-        Implement the handshake: When the side panel opens, it queries the activeTab URL and displays it.
+    UI: Create "Hello World" side panel that displays the active tab's URL.
 
 Phase 2: The Highlighter Core (Weeks 3-4)
 
 Goal: Allow users to paint on the web page and persist the coordinates.
 
-    Text Selection & Painting:
+    Painting: Listen for mouseup, inject "Tooltip" with default colors, and render highlights using CSS.highlights or <span> wrapping.
 
-        Event Listener: Listen for mouseup events to detect user selection.
+    Context Capture: Capture exactText, prefix (30 chars), suffix (30 chars), and xpath.
 
-        Floating UI: Inject a "Tooltip" DOM element near the selection (React Portal or Shadow DOM) with color swatches.
+    Persistence: Save anchor data to Dexie.js.
 
-        Rendering: Use the CSS.highlights API (if available) or standard <span> wrapping to paint the text background.
+    Re-hydration: Implement fuzzy matching (XPath -> Context Search -> Levenshtein) to restore highlights on page load.
 
-    Context Capture (Crucial Step):
+Phase 3: Visual Customization & Layer Logic (Weeks 5-6) [NEW]
 
-        When a highlight is created, capture the Anchor Data:
+Goal: Enable dynamic styling, custom palettes, and robust handling of overlapping highlights.
 
-            exactText: The selected string.
+    Settings UI:
 
-            prefix: 30 chars before.
+        Create a Settings page allowing users to add/remove HEX codes to their customPalette.
 
-            suffix: 30 chars after.
+        Implement "Default Highlight Style" configuration (Solid vs. Underline, Opacity levels).
 
-            xpath: The precise DOM path.
+    Interactive Editing (The "On the Fly" Feature):
 
-    Persistence:
+        Context Menu: Implement a custom right-click or hover menu on existing highlights to "Change Color" or "Delete".
 
-        Save this blob to Dexie.js under the notes table.
+        Live Updates: Ensure changing a color in the DOM immediately updates the specific record in Dexie.js without page reload.
 
-    Re-hydration (The "Fuzzy" Logic):
+    Advanced Collision UI:
 
-        On page load, query Dexie for the current URL.
+        Upgrade the "Cluster Bubbles" (from Phase 2) to be interactive.
 
-        Algorithm:
+        Feature: Clicking a bubble in a stack focuses that layer; Right-clicking a bubble opens a color picker for that specific layer, allowing users to color-code nested ideas (e.g., Yellow sentence inside a Blue paragraph).
 
-            Try xpath match first (fastest).
-
-            If xpath fails (DOM changed), search page text for prefix + exactText + suffix.
-
-            If that fails, search for exactText with >90% similarity (using Levenshtein distance).
-
-            If all fail, mark as isOrphaned: true.
-
-Phase 3: Note Management & Side Panel UI (Weeks 5-6)
+Phase 4: Note Management & Side Panel UI (Weeks 7-8)
 
 Goal: Build the CRUD interface in the Side Panel.
 
-    Note List View:
+    Note List: Query Dexie for current URL notes; render cards with snippets.
 
-        Query Dexie for all notes matching the current tab's URL.
+    Editor: Implement Tiptap/Slate.js (Bold, Italic, Link) with 500ms debounce auto-save.
 
-        Render cards showing the highlighted snippet + user note.
+    Bi-directional Nav:
 
-    Rich Text Editor:
+        Panel->Page: Scroll to highlight.
 
-        Implement a lightweight editor (e.g., Tiptap or Slate.js) restricted to Bold, Italic, Link.
+        Page->Panel: Scroll to note card.
 
-        Auto-save: Debounce keypresses (500ms) to update IndexedDB automatically.
+    Orphan UI: "Re-link" flow to repair broken anchors.
 
-    Bi-directional Navigation:
-
-        Panel to Page: Clicking a note card scrolls the webpage to the specific highlight element (element.scrollIntoView()).
-
-        Page to Panel: Clicking a highlight on the page scrolls the Side Panel list to the corresponding note card.
-
-    Orphan Handling UI:
-
-        Create the "Re-link" flow: A button on orphaned notes that triggers a "listener mode" waiting for the user to select new text to repair the broken link.
-
-Phase 4: Tagging & Global Search (Weeks 7-8)
+Phase 5: Tagging & Global Search (Weeks 9-10)
 
 Goal: Turn isolated notes into a knowledge base.
 
-    Tagging System:
+    Tagging: Chip input in editor; index tags in Dexie.
 
-        UI: Add a "Chip Input" field to the Note Editor.
+    Dashboard: "Tags" view in Side Panel showing counts.
 
-        Storage: Ensure tags are indexed in Dexie (notes table -> tags array) for fast lookup.
+    Global Search: Search bar querying content, anchors, and tags across all URLs.
 
-        Dashboard: Create a "Tags" view in the Side Panel to see all used tags and counts.
+Phase 6: Global Dashboard & Deep Navigation (Weeks 11-12)
 
-    Global Search:
+Goal: Create a central hub for all knowledge.
 
-        Implement a search bar in the Side Panel header.
+    Global Tab: "All Notes" view sorted by date with Virtual Scrolling.
 
-        Query Logic: Search against content.text, anchor.text, and tags across all URLs in Dexie.
+    Deep Linking: Background script logic to find existing tabs or open new ones, then scroll to the note via URL hash or message polling.
 
-        Result Action: Clicking a result from a different page opens that URL in a new tab and auto-scrolls to the highlight.
+Phase 7: AI Integration (Weeks 13-14)
 
-Phase 5: AI Integration (Weeks 9-10)
+ Goal: Add "Magic" features using Hybrid AI.
 
-Goal: Add "Magic" features using Hybrid AI.
+    Local: window.ai for Summarization and Auto-Tagging.
 
-    Local AI (Gemini Nano):
+    Cloud: LangChain.js integration for "Ask Note" features with BYOK security.
 
-        Check for window.ai availability (Chrome built-in AI).
-
-        Feature: "Summarize Highlight." Pass the highlighted text to window.ai.summarizer.summarize().
-
-        Feature: "Auto-Tag." Pass text to the model with a prompt: "Extract 3 keywords from this text as CSV."
-
-    Cloud AI (LangChain.js):
-
-        Settings Page: Add input for OpenAI/Anthropic API Key.
-
-        Security: Save key to chrome.storage.local (NOT synced).
-
-        Feature: "Ask Note." Use LangChain to send the highlighted text + a user question to the external LLM.
-
-    Cost Controls:
-
-        Disable Cloud features if no key is present.
-
-        Always default to Local AI if available and sufficient.
-
-Phase 6: Polish, Security & Release (Weeks 11-12)
+Phase 8: Polish, Security & Release (Weeks 15-16)
 
 Goal: Prepare for the Web Store.
 
-    Data Portability:
+    Portability: JSON Export/Import (Blob streaming).
 
-        Export: Stream IndexedDB data to a JSON file (using JSON.stringify with a blob).
+    Performance: Move Fuzzy Matcher to Web Worker.
 
-        Import: Read JSON, validate schema, and bulk-add to Dexie (with "Overwrite" or "Merge" options).
-
-    Performance Tuning:
-
-        Implement "Virtual Scrolling" in the Side Panel if a user has >50 notes on one page.
-
-        Ensure the "Fuzzy Matcher" runs in a Web Worker to avoid freezing the main thread during heavy page loads.
-
-    Store Assets:
-
-        Create screenshots, promo tiles, and write the Privacy Policy (crucial: explicitly state data is stored locally).
+    Assets: Privacy Policy explicitly stating local storage.
