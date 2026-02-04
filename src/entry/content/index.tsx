@@ -1,20 +1,20 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { FloatingHighlighter } from './FloatingHighlighter';
-import './styles.css';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { FloatingHighlighter } from "./FloatingHighlighter";
+import "./styles.css";
 
-console.log('Highlight & Note Content Script Loaded');
+console.log("Highlight & Note Content Script Loaded");
 
 // 1. Create a container for our React App
-const rootEl = document.createElement('div');
-rootEl.id = 'highlight-note-root';
+const rootEl = document.createElement("div");
+rootEl.id = "highlight-note-root";
 document.body.appendChild(rootEl);
 
 // 2. Mount the React App into the container
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <FloatingHighlighter />
-  </React.StrictMode>
+  </React.StrictMode>,
 );
 
 // 3. HighlightManager is initialized via an import side-effect in FloatingHighlighter.

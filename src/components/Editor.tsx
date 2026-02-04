@@ -29,7 +29,8 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
     autofocus: true,
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl m-5 focus:outline-none dark:prose-invert",
+        class:
+          "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl m-5 focus:outline-none dark:prose-invert",
       },
     },
     onFocus: () => setIsFocused(true),
@@ -68,7 +69,12 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
     }
     const url = window.prompt("URL");
     if (url) {
-      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: url })
+        .run();
     }
   };
 
@@ -76,7 +82,6 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
     e.preventDefault();
     e.stopPropagation();
   };
-
 
   return (
     <div className="relative">
@@ -113,7 +118,11 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
         </div>
       )}
       <EditorContent editor={editor} />
-      {isSaved && <div className="absolute bottom-2 right-2 text-xs text-gray-400">Saved</div>}
+      {isSaved && (
+        <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+          Saved
+        </div>
+      )}
     </div>
   );
 }

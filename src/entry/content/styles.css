@@ -1,16 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .ext-highlight {
   background-color: yellow;
 }
 
-.flash {
-  animation: flash 1s;
+.ext-flash-focus {
+  animation: ext-flash-focus 2s ease-in-out;
 }
 
-@keyframes flash {
-  0% {
-    background-color: yellow;
-  }
+@keyframes ext-flash-focus {
+  0%,
   100% {
-    background-color: transparent;
+    outline: 2px solid transparent;
+  }
+  50% {
+    outline: 2px solid #007bff;
   }
 }

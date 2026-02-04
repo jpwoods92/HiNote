@@ -9,7 +9,6 @@ import { Trash2, Link2Off } from "lucide-react";
 import { stripHtml } from "@/utils/sidepanel";
 import NoteTags from "./NoteTags";
 
-
 interface NoteCardProps {
   note: Note;
   tabId?: number;
@@ -56,8 +55,11 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
 
   const sanitizedHtml = DOMPurify.sanitize(note.content.html);
 
-  const hasTextContent = useMemo(() => stripHtml(sanitizedHtml).trim() !== "", [sanitizedHtml]);
-  
+  const hasTextContent = useMemo(
+    () => stripHtml(sanitizedHtml).trim() !== "",
+    [sanitizedHtml],
+  );
+
   return (
     <div
       className="p-4 border rounded-lg shadow-sm cursor-pointer hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-lg"

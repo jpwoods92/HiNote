@@ -49,6 +49,17 @@ export type FocusNotePayload = {
   id: string;
 };
 
+export type MapsToNotePayload = {
+  url: string;
+  noteId: string;
+};
+
+export type UpdateSettingsPayload = {
+  theme: "light" | "dark" | "system";
+  defaultOpacity: number; // 0.1 to 1.0
+  customPalette: string[]; // Array of HEX codes
+};
+
 export function sendMessage<T, U = void>(message: Message<T>): Promise<U> {
   return browser.runtime.sendMessage(message);
 }

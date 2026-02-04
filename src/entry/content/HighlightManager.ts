@@ -18,6 +18,8 @@ import {
   findRangeByFuzzyMatch,
   getContext,
 } from "../../utils/dom";
+import { eventBus } from "../../utils/eventBus";
+import { Settings } from "../../utils/settings";
 
 export class HighlightManager {
   constructor() {
@@ -41,6 +43,7 @@ export class HighlightManager {
           | ScrollToHighlightPayload
           | RemoveHighlightPayload
           | EnterRelinkModePayload
+          | Settings
         >,
       ) => {
         switch (message.type) {
@@ -59,9 +62,26 @@ export class HighlightManager {
               (message.payload as EnterRelinkModePayload).id,
             );
             break;
+          case "SETTINGS_UPDATED":
+            if (message.payload) {
+              const settings = message.payload as Settings;
+              localStorage.setItem("settings", JSON.stringify(settings));
+              eventBus.emit("settings-updated-internal");
+            }
+            break;
         }
       },
     );
+
+    // Apply initial settings
+    try {
+      const storedSettings = localStorage.getItem("settings");
+      if (storedSettings) {
+        // const settings: Settings = JSON.parse(storedSettings);
+      }
+    } catch (error) {
+      console.error("Error reading initial settings from localStorage:", error);
+    }
 
     // Re-hydrate on load
     await this.restoreHighlights();
@@ -83,12 +103,14 @@ export class HighlightManager {
     }).observe(document, { subtree: true, childList: true });
   }
 
+
+
   /**
    * Creates a highlight from the current selection, saves it, and paints it.
    * @param content Optional note content
    * @param range Optional range to highlight (defaults to current selection)
    */
-  async createHighlight(content?: string, range?: Range) {
+  async createHighlight(content?: string, range?: Range, color = "yellow") {
     let targetRange = range;
 
     if (!targetRange) {
@@ -118,7 +140,7 @@ export class HighlightManager {
         quote: text,
         prefix,
         suffix,
-        color: "yellow",
+        color,
         style: "solid",
       },
       content: {
@@ -131,14 +153,9 @@ export class HighlightManager {
     };
 
     // 1. Paint immediately
-    const wrappers = highlightRangeUtil(targetRange, id);
+    const wrappers = highlightRangeUtil(targetRange, id, color);
     wrappers.forEach((wrapper) => {
-      wrapper.addEventListener("click", () => {
-        void sendMessage({
-          type: "FOCUS_NOTE",
-          payload: { id },
-        });
-      });
+      this.addHighlightEventListeners(wrapper, id);
     });
 
     // 2. Clear selection for feedback
@@ -189,14 +206,9 @@ export class HighlightManager {
       }
 
       if (range) {
-        const wrappers = highlightRangeUtil(range, note.id);
+        const wrappers = highlightRangeUtil(range, note.id, note.anchor.color);
         wrappers.forEach((wrapper) => {
-          wrapper.addEventListener("click", () => {
-            void sendMessage({
-              type: "FOCUS_NOTE",
-              payload: { id: note.id },
-            });
-          });
+          this.addHighlightEventListeners(wrapper, note.id);
         });
         if (note.isOrphaned) {
           void sendMessage({
@@ -224,11 +236,30 @@ export class HighlightManager {
     if (highlight) {
       highlight.scrollIntoView({ behavior: "smooth", block: "center" });
       // Flash the highlight
-      highlight.classList.add("flash");
+      highlight.classList.add("ext-flash-focus");
       setTimeout(() => {
-        highlight.classList.remove("flash");
-      }, 1000);
+        highlight.classList.remove("ext-flash-focus");
+      }, 2000);
+    } else {
+      this.showToast("Unable to locate highlight on this page.");
     }
+  }
+
+  showToast(message: string) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.top = "20px";
+    toast.style.right = "20px";
+    toast.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    toast.style.color = "white";
+    toast.style.padding = "10px 20px";
+    toast.style.borderRadius = "5px";
+    toast.style.zIndex = "999999";
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 3000);
   }
 
   /**
@@ -294,14 +325,9 @@ export class HighlightManager {
             type: "UPDATE_NOTE_ANCHOR",
             payload: { id, anchor: newAnchor },
           });
-          const wrappers = highlightRangeUtil(range, id);
+          const wrappers = highlightRangeUtil(range, id, note.anchor.color);
           wrappers.forEach((wrapper) => {
-            wrapper.addEventListener("click", () => {
-              void sendMessage({
-                type: "FOCUS_NOTE",
-                payload: { id },
-              });
-            });
+            this.addHighlightEventListeners(wrapper, id);
           });
           void sendMessage({
             type: "RELINK_SUCCESS",
@@ -319,6 +345,80 @@ export class HighlightManager {
       },
       { once: true },
     );
+  }
+
+  addHighlightEventListeners(wrapper: HTMLElement, id: string) {
+    wrapper.addEventListener("mouseover", async (e) => {
+      // Cluster logic based on bounding box overlap
+      const target = e.target as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const overlappingIds = new Set<string>();
+
+      document.querySelectorAll(".ext-highlight").forEach((el) => {
+        if (el === wrapper) return;
+        const otherRect = el.getBoundingClientRect();
+        const overlap = !(
+          rect.right < otherRect.left ||
+          rect.left > otherRect.right ||
+          rect.bottom < otherRect.top ||
+          rect.top > otherRect.bottom
+        );
+
+        const otherId = (el as HTMLElement).dataset.highlightId;
+        if (overlap && otherId) {
+          overlappingIds.add(otherId);
+        }
+      });
+
+      overlappingIds.add(id);
+
+      if (overlappingIds.size > 1) {
+        const notesForCluster: Note[] = [];
+         for (const noteId of overlappingIds) {
+          const note = await sendMessage<GetNotePayload, GetNoteResponse>({
+            type: "GET_NOTE",
+            payload: { id: noteId },
+          });
+          if (note) {
+            notesForCluster.push(note);
+          }
+        }
+        const event = new CustomEvent("show-cluster-bubbles", {
+          detail: {
+            notes: notesForCluster,
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY - 30,
+          },
+        });
+        document.dispatchEvent(event);
+      }
+    });
+
+    wrapper.addEventListener("mouseout", () => {
+      setTimeout(() => {
+        const stillHovered = document.querySelector(".ext-highlight:hover");
+        if (!stillHovered) {
+            const event = new CustomEvent("hide-cluster-bubbles");
+            document.dispatchEvent(event);
+        }
+      }, 50);
+    });
+
+    wrapper.addEventListener("click", (e) => {
+      const overlapping =
+        document.querySelectorAll(".ext-highlight:hover").length > 1;
+      if (!overlapping) {
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        const event = new CustomEvent("open-highlight-editor", {
+          detail: {
+            noteId: id,
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY - 30,
+          },
+        });
+        document.dispatchEvent(event);
+      }
+    });
   }
 }
 

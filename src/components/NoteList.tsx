@@ -3,7 +3,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db";
 import { useCurrentTab } from "../hooks/useCurrentTab";
 import { NoteCard } from "./NoteCard";
-import { onMessage, Message, FocusNotePayload, EnterRelinkModePayload, RelinkSuccessPayload } from "../utils/messaging";
+import {
+  onMessage,
+  Message,
+  FocusNotePayload,
+  EnterRelinkModePayload,
+  RelinkSuccessPayload,
+} from "../utils/messaging";
 import { normalizeUrl } from "../utils/url";
 
 export function NoteList() {
@@ -13,36 +19,49 @@ export function NoteList() {
   const notes = useLiveQuery(
     () =>
       currentTab?.url
-        ? db.notes.where("normalizedUrl").equals(normalizeUrl(currentTab.url)).reverse().sortBy("createdAt")
+        ? db.notes
+            .where("normalizedUrl")
+            .equals(normalizeUrl(currentTab.url))
+            .reverse()
+            .sortBy("createdAt")
         : [],
-    [currentTab]
+    [currentTab],
   );
   const noteRefs = useRef<{ [key: string]: HTMLDivElement }>({});
 
   useEffect(() => {
-    const cleanup = onMessage((message: Message<FocusNotePayload | EnterRelinkModePayload | RelinkSuccessPayload>) => {
-      if (message.type === "FOCUS_NOTE" && message?.payload?.id) {
-        const noteElement = noteRefs.current[message.payload.id];
-        if (noteElement) {
-          noteElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          noteElement.classList.add("focused");
-          setTimeout(() => {
-            noteElement.classList.remove("focused");
-          }, 1000);
+    const cleanup = onMessage(
+      (
+        message: Message<
+          FocusNotePayload | EnterRelinkModePayload | RelinkSuccessPayload
+        >,
+      ) => {
+        if (message.type === "FOCUS_NOTE" && message?.payload?.id) {
+          const noteElement = noteRefs.current[message.payload.id];
+          if (noteElement) {
+            noteElement.scrollIntoView({ behavior: "smooth", block: "center" });
+            noteElement.classList.add("focused");
+            setTimeout(() => {
+              noteElement.classList.remove("focused");
+            }, 1000);
+          }
+        } else if (
+          message.type === "ENTER_RELINK_MODE" &&
+          message?.payload?.id
+        ) {
+          setRelinkingNoteId(message.payload.id);
+        } else if (message.type === "RELINK_SUCCESS") {
+          setRelinkingNoteId(null);
         }
-      } else if (message.type === "ENTER_RELINK_MODE" && message?.payload?.id) {
-        setRelinkingNoteId(message.payload.id);
-      } else if (message.type === "RELINK_SUCCESS") {
-        setRelinkingNoteId(null);
-      }
-    });
+      },
+    );
     return cleanup;
   }, []);
 
   if (!notes) {
     return <div>Loading notes...</div>;
   }
-  
+
   if (notes.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">

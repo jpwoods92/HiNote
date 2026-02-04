@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../db";
-import { PlusCircle, XCircle, X } from "lucide-react";
+import { PlusCircle, XCircle } from "lucide-react";
+import { TagChip } from "./TagChip";
 
 interface NoteTagsProps {
   noteId: string;
@@ -25,7 +26,8 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
       const allTags = await db.notes.orderBy("content.tags").uniqueKeys();
       const filteredSuggestions = (allTags as string[]).filter(
         (tag) =>
-          tag.toLowerCase().includes(value.toLowerCase()) && !tags.includes(tag)
+          tag.toLowerCase().includes(value.toLowerCase()) &&
+          !tags.includes(tag),
       );
       setSuggestions(filteredSuggestions);
     } else {
@@ -34,7 +36,7 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
   };
 
   const handleInputKeyDown = async (
-    e: React.KeyboardEvent<HTMLInputElement>
+    e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (e.key === "Enter" && inputValue.trim() !== "") {
       const newTag = inputValue.trim();
@@ -68,18 +70,7 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
     <div className="p-2 mt-2 border-t border-gray-200 dark:border-gray-700">
       <div className="flex flex-wrap items-center gap-2 mb-2">
         {tags.map((tag) => (
-          <div
-            key={tag}
-            className="flex items-center bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-full py-1 px-3 text-xs border border-gray-300 dark:border-gray-500"
-          >
-            {tag}
-            <button
-              onClick={() => handleRemoveTag(tag)}
-              className="ml-1.5 -mr-1 p-0.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500"
-            >
-              <X size={12} />
-            </button>
-          </div>
+          <TagChip key={tag} tag={tag} onRemove={handleRemoveTag} />
         ))}
         <button
           onClick={() => setShowInput(!showInput)}

@@ -31,14 +31,16 @@ export function useCurrentTab() {
     const handleTabUpdate = (
       tabId: number,
       changeInfo: browser.Tabs.OnUpdatedChangeInfoType,
-      tab: browser.Tabs.Tab
+      tab: browser.Tabs.Tab,
     ) => {
       if (tab.active && changeInfo.url) {
         setTab(tab);
       }
     };
 
-    const handleTabActivated = (activeInfo: browser.Tabs.OnActivatedActiveInfoType) => {
+    const handleTabActivated = (
+      activeInfo: browser.Tabs.OnActivatedActiveInfoType,
+    ) => {
       void browser.tabs.get(activeInfo.tabId).then(setTab);
     };
 

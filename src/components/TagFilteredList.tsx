@@ -1,8 +1,8 @@
-import React from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db';
-import { NoteCard } from './NoteCard';
-import { useCurrentTab } from '@/hooks/useCurrentTab';
+import React from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/db";
+import { NoteCard } from "./NoteCard";
+import { useCurrentTab } from "@/hooks/useCurrentTab";
 
 interface TagFilteredListProps {
   tag: string;
@@ -11,8 +11,8 @@ interface TagFilteredListProps {
 export const TagFilteredList: React.FC<TagFilteredListProps> = ({ tag }) => {
   const { tab: currentTab } = useCurrentTab();
   const notes = useLiveQuery(
-    () => db.notes.where('content.tags').equals(tag).toArray(),
-    [tag]
+    () => db.notes.where("content.tags").equals(tag).toArray(),
+    [tag],
   );
 
   return (

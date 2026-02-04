@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/db";
+import { TagChip } from "./TagChip";
 
 interface TagWithCount {
   name: string;
@@ -16,7 +17,7 @@ export const TagDashboard: React.FC<TagDashboardProps> = ({ onTagSelect }) => {
 
   const allTags = useLiveQuery(
     () => db.notes.orderBy("content.tags").uniqueKeys(),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export const TagDashboard: React.FC<TagDashboardProps> = ({ onTagSelect }) => {
               .equals(tag)
               .count();
             return { name: tag, count };
-          })
+          }),
         );
         setTags(tagCounts);
       };
@@ -41,20 +42,17 @@ export const TagDashboard: React.FC<TagDashboardProps> = ({ onTagSelect }) => {
     <div className="tag-dashboard p-4 rounded-lg shadow-sm">
       <h2 className="text-lg font-semibold mb-4">All Tags</h2>
       {tags.length > 0 ? (
-        <ul className="space-y-2">
+        <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
-            <li
+            <div
               key={tag.name}
               onClick={() => onTagSelect(tag.name)}
-              className="p-2 border rounded-md hover:bg-gray-100 flex justify-between items-center cursor-pointer"
+              className="cursor-pointer"
             >
-              <span className="font-medium">{tag.name}</span>
-              <span className="text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
-                {tag.count}
-              </span>
-            </li>
+              <TagChip tag={tag.name} count={tag.count} />
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
         <div className="text-center text-gray-500">
           No tags added to notes yet...

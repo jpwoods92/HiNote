@@ -1,7 +1,7 @@
-import React from 'react';
-import { Note } from '@/db';
-import { NoteCard } from './NoteCard';
-import { useCurrentTab } from '@/hooks/useCurrentTab';
+import React from "react";
+import { Note } from "@/db";
+import { NoteCard } from "./NoteCard";
+import { useCurrentTab } from "@/hooks/useCurrentTab";
 
 interface SearchResultsProps {
   results: Note[];
