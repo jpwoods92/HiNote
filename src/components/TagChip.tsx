@@ -53,9 +53,9 @@ export const TagChip: React.FC<TagChipProps> = ({
             e.stopPropagation();
             onRemove(tag);
           }}
-          className={`ml-1.5 -mr-1 w-4 h-4 p-[0px] flex items-center justify-center ${
+          className={`ml-1.5 -mr-1 w-4 h-4 p-[0px] flex items-center justify-center bg-transparent ${
             textColor === "white" ? "text-white" : "text-black"
-          } dark:text-white`}
+          }`}
         >
           x
         </button>

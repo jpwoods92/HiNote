@@ -70,7 +70,15 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
             <X size={20} />
           </button>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+        <p
+          className="text-sm text-gray-600 dark:text-gray-400 mb-2"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 4,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
           Context: "{note.anchor.quote}"
         </p>
         <div

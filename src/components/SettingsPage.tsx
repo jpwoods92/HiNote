@@ -44,7 +44,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchModels();
   }, [fetchModels]);
-  
+
   const updateModelSelection = useCallback(() => {
     if (models.length > 0 && !models.includes(settings.aiModelId ?? "")) {
       updateSettings({ aiModelId: models[0] });
@@ -169,9 +169,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
                 type="password"
                 id="apiKey"
                 value={settings.apiKey}
-                onChange={(e) =>
-                  updateSettings({ apiKey: e.target.value })
-                }
+                onChange={(e) => updateSettings({ apiKey: e.target.value })}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
@@ -182,9 +180,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
               <select
                 id="aiModel"
                 value={settings.aiModelId}
-                onChange={(e) =>
-                  updateSettings({ aiModelId: e.target.value })
-                }
+                onChange={(e) => updateSettings({ aiModelId: e.target.value })}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 disabled={isLoadingModels || !settings.apiKey}
               >
@@ -212,4 +208,3 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
-

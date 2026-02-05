@@ -44,10 +44,7 @@ export const TagDashboard: React.FC<TagDashboardProps> = ({ onTagSelect }) => {
       {tags.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
-            <div
-              key={tag.name}
-              onClick={() => onTagSelect(tag.name)}
-            >
+            <div key={tag.name} onClick={() => onTagSelect(tag.name)}>
               <TagChip tag={tag.name} count={tag.count} />
             </div>
           ))}
