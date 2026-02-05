@@ -1,13 +1,18 @@
 import { GlobalNoteList } from "@/components/GlobalNoteList";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { NoteList } from "@/components/NoteList";
 import { TagDashboard } from "@/components/TagDashboard";
 import { TagFilteredList } from "@/components/TagFilteredList";
 import { SearchBar } from "@/components/SearchBar";
 import { Note } from "@/db";
 import { SearchResults } from "@/components/SearchResults";
-import { SettingsPage } from "@/components/SettingsPage";
 import clsx from "clsx";
+
+const SettingsPage = lazy(() =>
+  import("@/components/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
 
 type View = "notes" | "tags" | "tagFiltered" | "settings" | "allNotes";
 
@@ -100,7 +105,9 @@ function App() {
           <SearchResults results={searchResults} />
         </div>
       ) : view === "settings" ? (
-        <SettingsPage onBack={handleBackFromSettings} />
+        <Suspense fallback={<div>Loading...</div>}>
+          <SettingsPage onBack={handleBackFromSettings} />
+        </Suspense>
       ) : (
         <>
           <div className="flex justify-center gap-4">

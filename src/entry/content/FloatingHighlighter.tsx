@@ -3,7 +3,8 @@ import { highlightManager } from "./HighlightManager";
 import { useSettings } from "@/utils/settings";
 import { HighlightEditor } from "@/components/HighlightEditor";
 import { ClusterBubbles } from "@/components/ClusterBubbles";
-import { db, Note } from "@/db";
+import { sendMessage, GetNotePayload } from "@/utils/messaging";
+import { Note } from "@/db";
 
 export const FloatingHighlighter: React.FC = () => {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
@@ -124,13 +125,22 @@ export const FloatingHighlighter: React.FC = () => {
 
   const handleColorChange = async (newColor: string) => {
     if (!editorState) return;
-    await db.notes.update(editorState.noteId, { "anchor.color": newColor });
-    const highlight = document.querySelector(
-      `[data-highlight-id="${editorState.noteId}"]`,
-    ) as HTMLElement;
-    if (highlight) {
-      highlight.style.backgroundColor = newColor;
-    }
+    const noteToUpdate = await sendMessage<GetNotePayload, Note>({
+      type: "GET_NOTE",
+      payload: { id: editorState.noteId },
+    });
+
+    if (!noteToUpdate) return;
+    const newAnchor = { ...noteToUpdate.anchor, color: newColor };
+    await sendMessage({
+      type: "UPDATE_NOTE_ANCHOR",
+      payload: { id: editorState.noteId, anchor: newAnchor },
+    });
+    document
+      .querySelectorAll(`[data-highlight-id="${editorState.noteId}"]`)
+      .forEach((element) => {
+        (element as HTMLElement).style.backgroundColor = newColor;
+      });
     setEditorState(null);
   };
 
@@ -157,15 +167,17 @@ export const FloatingHighlighter: React.FC = () => {
     const currentIndex = settings.customPalette.indexOf(note.anchor.color);
     const nextIndex = (currentIndex + 1) % settings.customPalette.length;
     const newColor = settings.customPalette[nextIndex];
-
-    await db.notes.update(noteId, { "anchor.color": newColor });
+    const newAnchor = { ...note.anchor, color: newColor };
+    await sendMessage({
+      type: "UPDATE_NOTE_ANCHOR",
+      payload: { id: noteId, anchor: newAnchor },
+    });
     const highlightElements = document.querySelectorAll(
       `[data-highlight-id="${noteId}"]`,
     );
     highlightElements.forEach((el) => {
       (el as HTMLElement).style.backgroundColor = newColor;
     });
-
     setClusterState((prevState) => {
       if (!prevState) return null;
       const newNotes = prevState.notes.map((n) =>

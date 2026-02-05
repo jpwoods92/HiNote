@@ -1,13 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import { formatDistanceToNow } from "date-fns";
 import DOMPurify from "dompurify";
 import { Note } from "../db";
 import { sendTabMessage } from "../utils/messaging";
 import { db } from "../db";
-import { Editor } from "./Editor";
-import { Trash2, Link2Off } from "lucide-react";
+import { Trash2, Link2Off, BrainCircuit } from "lucide-react";
 import { stripHtml } from "@/utils/sidepanel";
 import NoteTags from "./NoteTags";
+import { useSettings } from "../utils/settings";
+import { AIChatModal } from "./AIChatModal";
+
+const Editor = lazy(() =>
+  import("./Editor").then((module) => ({ default: module.Editor })),
+);
 
 interface NoteCardProps {
   note: Note;
@@ -18,6 +23,8 @@ const PLACEHOLDER = "Click to add a note...";
 
 export function NoteCard({ note, tabId }: NoteCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [settings] = useSettings();
 
   const handleScrollToHighlight = () => {
     if (note.isOrphaned || !tabId) return;
@@ -75,14 +82,27 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
             {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            void handleDelete(e);
-          }}
-          className="text-red-500 hover:text-red-700"
-        >
-          <Trash2 size={18} />
-        </button>
+        <div className="flex items-center space-x-2">
+          {settings.apiKey && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsChatOpen(true);
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <BrainCircuit size={18} />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              void handleDelete(e);
+            }}
+            className="text-red-500 hover:text-red-700"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
       <div
         className="mt-2 text-base font-semibold text-gray-900 dark:text-gray-100"
@@ -97,11 +117,13 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
       </div>
       <div className="mt-2 text-gray-700 dark:text-gray-300">
         {isEditing ? (
-          <Editor
-            noteId={note.id}
-            content={note.content.html}
-            onClose={() => setIsEditing(false)}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <Editor
+              noteId={note.id}
+              content={note.content.html}
+              onClose={() => setIsEditing(false)}
+            />
+          </Suspense>
         ) : (
           <div
             onClick={handleEdit}
@@ -124,6 +146,9 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
         </div>
       )}
       <NoteTags noteId={note.id} initialTags={note.content.tags || []} />
+      {isChatOpen && (
+        <AIChatModal note={note} onClose={() => setIsChatOpen(false)} />
+      )}
     </div>
   );
 }

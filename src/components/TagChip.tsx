@@ -4,6 +4,7 @@ interface TagChipProps {
   tag: string;
   count?: number;
   onRemove?: (tag: string) => void;
+  onClick?: (tag: string) => void;
 }
 
 const stringToColor = (str: string) => {
@@ -19,7 +20,12 @@ const stringToColor = (str: string) => {
   return color;
 };
 
-export const TagChip: React.FC<TagChipProps> = ({ tag, count, onRemove }) => {
+export const TagChip: React.FC<TagChipProps> = ({
+  tag,
+  count,
+  onRemove,
+  onClick,
+}) => {
   const bgColor = stringToColor(tag);
   // Check if the color is too dark and adjust the text color
   const r = parseInt(bgColor.substring(1, 3), 16);
@@ -31,16 +37,25 @@ export const TagChip: React.FC<TagChipProps> = ({ tag, count, onRemove }) => {
   return (
     <div
       className="flex items-center rounded-full py-1 px-3 text-xs"
-      style={{ backgroundColor: bgColor, color: textColor }}
+      style={{
+        backgroundColor: bgColor,
+        color: textColor,
+        cursor: "pointer",
+      }}
       title={count ? `${count} notes` : undefined}
+      onClick={() => onClick?.(tag)}
     >
       {tag}
       {count && <span className="ml-1.5">{count}</span>}
       {onRemove && (
         <button
-          onClick={() => onRemove(tag)}
-          className="ml-1.5 -mr-1 w-4 h-4 p-[0px] flex items-center justify-center"
-          style={{ color: textColor }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(tag);
+          }}
+          className={`ml-1.5 -mr-1 w-4 h-4 p-[0px] flex items-center justify-center ${
+            textColor === "white" ? "text-white" : "text-black"
+          } dark:text-white`}
         >
           x
         </button>

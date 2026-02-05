@@ -3,6 +3,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { db } from "../db";
+import { LocalAIService } from "../services/ai/local";
 
 interface EditorProps {
   noteId: string;
@@ -13,6 +14,15 @@ interface EditorProps {
 export function Editor({ noteId, content, onClose }: EditorProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isAiAvailable, setIsAiAvailable] = useState(false);
+
+  useEffect(() => {
+    async function checkAi() {
+      const { isAvailable } = await LocalAIService.canCreateTextSession();
+      setIsAiAvailable(isAvailable);
+    }
+    checkAi();
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -78,6 +88,32 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
     }
   };
 
+  const summarize = async () => {
+    if (!editor) return;
+    const text = editor.state.doc.textBetween(
+      editor.state.selection.from,
+      editor.state.selection.to,
+    );
+    if (!text) return;
+
+    try {
+      const stream = await LocalAIService.summarize(text);
+      let fullResponse = "";
+      editor.chain().focus().insertContentAt(0, "Summary: ").run();
+      const initialInsertionPoint = "Summary: ".length;
+      for await (const chunk of stream) {
+        fullResponse += chunk;
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(initialInsertionPoint, fullResponse)
+          .run();
+      }
+    } catch (error) {
+      console.error("Error summarizing:", error);
+    }
+  };
+
   const preventAndStop = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -89,32 +125,57 @@ export function Editor({ noteId, content, onClose }: EditorProps) {
         <div className="flex p-1 space-x-1 bg-gray-100 rounded dark:bg-gray-700">
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-1 rounded ${editor.isActive("bold") ? "bg-gray-300 dark:bg-gray-600" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+            className={`p-1 rounded ${
+              editor.isActive("bold")
+                ? "bg-gray-300 dark:bg-gray-600"
+                : "hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
             onMouseDown={preventAndStop}
           >
             Bold
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-1 rounded ${editor.isActive("italic") ? "bg-gray-300 dark:bg-gray-600" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+            className={`p-1 rounded ${
+              editor.isActive("italic")
+                ? "bg-gray-300 dark:bg-gray-600"
+                : "hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
             onMouseDown={preventAndStop}
           >
             Italic
           </button>
           <button
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-1 rounded ${editor.isActive("bulletList") ? "bg-gray-300 dark:bg-gray-600" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+            className={`p-1 rounded ${
+              editor.isActive("bulletList")
+                ? "bg-gray-300 dark:bg-gray-600"
+                : "hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
             onMouseDown={preventAndStop}
           >
             Bullet List
           </button>
           <button
             onClick={toggleLink}
-            className={`p-1 rounded ${editor.isActive("link") ? "bg-gray-300 dark:bg-gray-600" : "hover:bg-gray-200 dark:hover:bg-gray-600"}`}
+            className={`p-1 rounded ${
+              editor.isActive("link")
+                ? "bg-gray-300 dark:bg-gray-600"
+                : "hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
             onMouseDown={preventAndStop}
           >
             Link
           </button>
+          {isAiAvailable && (
+            <button
+              onClick={summarize}
+              className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600`}
+              onMouseDown={preventAndStop}
+            >
+              Summarize
+            </button>
+          )}
         </div>
       )}
       <EditorContent editor={editor} />

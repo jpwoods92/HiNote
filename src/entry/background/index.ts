@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import {
   onMessage,
   Message,
@@ -12,8 +13,8 @@ import {
 import { db, Note } from "@/db";
 import { normalizeUrl } from "@/utils/url";
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
+browser.runtime.onInstalled.addListener(() => {
+  browser.contextMenus.create({
     id: "click-note-context-menu",
     title: "Add Note",
     contexts: ["selection", "page"],
@@ -21,8 +22,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // Check if sidePanel API is available before calling it.
   // This prevents crashes in Firefox or environments where sidePanel is undefined.
-  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-    void chrome.sidePanel.setPanelBehavior({
+  if (browser.sidePanel && browser.sidePanel.setPanelBehavior) {
+    void browser.sidePanel.setPanelBehavior({
       openPanelOnActionClick: true,
     });
   }
@@ -71,24 +72,24 @@ onMessage(
         isOrphaned: false,
       });
     } else if (message.type === "SETTINGS_UPDATED") {
-      chrome.tabs.query({}, (tabs) => {
+      browser.tabs.query({}).then((tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, message);
+            browser.tabs.sendMessage(tab.id, message);
           }
         });
       });
     } else if (message.type === "MAP_TO_NOTE" && payload) {
       const { url, noteId } = payload as MapsToNotePayload;
       const newUrl = `${url}#ext-focus=${noteId}`;
-      chrome.tabs.query({ url: url }, (tabs) => {
+      browser.tabs.query({ url: url }).then((tabs) => {
         if (tabs.length > 0) {
           const tab = tabs[0];
           if (tab.id) {
-            chrome.tabs.update(tab.id, { active: true, url: newUrl });
+            browser.tabs.update(tab.id, { active: true, url: newUrl });
           }
         } else {
-          chrome.tabs.create({ url: newUrl });
+          browser.tabs.create({ url: newUrl });
         }
       });
     }

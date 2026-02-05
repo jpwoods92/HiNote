@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../db";
-import { PlusCircle, XCircle } from "lucide-react";
+import { PlusCircle, XCircle, BrainCircuit } from "lucide-react";
 import { TagChip } from "./TagChip";
+import { LocalAIService } from "../services/ai/local";
 
 interface NoteTagsProps {
   noteId: string;
@@ -13,6 +14,16 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showInput, setShowInput] = useState(false);
+  const [isAiAvailable, setIsAiAvailable] = useState(false);
+  const [aiTagSuggestions, setAiTagSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function checkAi() {
+      const { isAvailable } = await LocalAIService.canCreateTextSession();
+      setIsAiAvailable(isAvailable);
+    }
+    checkAi();
+  }, []);
 
   useEffect(() => {
     setTags(initialTags);
@@ -40,30 +51,38 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
   ) => {
     if (e.key === "Enter" && inputValue.trim() !== "") {
       const newTag = inputValue.trim();
-      if (!tags.includes(newTag)) {
-        const newTags = [...tags, newTag];
-        setTags(newTags);
-        await db.notes.update(noteId, { "content.tags": newTags });
-      }
+      await addTag(newTag);
       setInputValue("");
       setSuggestions([]);
     }
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
-    if (!tags.includes(suggestion)) {
-      const newTags = [...tags, suggestion];
+    await addTag(suggestion);
+    setInputValue("");
+    setSuggestions([]);
+  };
+
+  const addTag = async (tag: string) => {
+    if (!tags.includes(tag)) {
+      const newTags = [...tags, tag];
       setTags(newTags);
       await db.notes.update(noteId, { "content.tags": newTags });
     }
-    setInputValue("");
-    setSuggestions([]);
   };
 
   const handleRemoveTag = async (tagToRemove: string) => {
     const newTags = tags.filter((tag) => tag !== tagToRemove);
     setTags(newTags);
     await db.notes.update(noteId, { "content.tags": newTags });
+  };
+
+  const handleSuggestTags = async () => {
+    const note = await db.notes.get(noteId);
+    if (note && note.content.text) {
+      const suggested = await LocalAIService.suggestTags(note.content.text);
+      setAiTagSuggestions(suggested.filter((tag) => !tags.includes(tag)));
+    }
   };
 
   return (
@@ -79,7 +98,32 @@ const NoteTags: React.FC<NoteTagsProps> = ({ noteId, initialTags }) => {
         >
           {showInput ? <XCircle size={18} /> : <PlusCircle size={18} />}
         </button>
+        {isAiAvailable && (
+          <button
+            onClick={handleSuggestTags}
+            title="Suggest tags with AI"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <BrainCircuit size={18} />
+          </button>
+        )}
       </div>
+      {aiTagSuggestions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          {aiTagSuggestions.map((tag) => (
+            <TagChip
+              key={tag}
+              tag={tag}
+              onClick={async (clickedTag) => {
+                await addTag(clickedTag);
+                setAiTagSuggestions(
+                  aiTagSuggestions.filter((t) => t !== clickedTag),
+                );
+              }}
+            />
+          ))}
+        </div>
+      )}
       {showInput && (
         <div className="relative">
           <input

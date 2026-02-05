@@ -47,7 +47,6 @@ export const TagDashboard: React.FC<TagDashboardProps> = ({ onTagSelect }) => {
             <div
               key={tag.name}
               onClick={() => onTagSelect(tag.name)}
-              className="cursor-pointer"
             >
               <TagChip tag={tag.name} count={tag.count} />
             </div>

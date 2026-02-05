@@ -103,8 +103,6 @@ export class HighlightManager {
     }).observe(document, { subtree: true, childList: true });
   }
 
-
-
   /**
    * Creates a highlight from the current selection, saves it, and paints it.
    * @param content Optional note content
@@ -374,7 +372,7 @@ export class HighlightManager {
 
       if (overlappingIds.size > 1) {
         const notesForCluster: Note[] = [];
-         for (const noteId of overlappingIds) {
+        for (const noteId of overlappingIds) {
           const note = await sendMessage<GetNotePayload, GetNoteResponse>({
             type: "GET_NOTE",
             payload: { id: noteId },
@@ -398,8 +396,8 @@ export class HighlightManager {
       setTimeout(() => {
         const stillHovered = document.querySelector(".ext-highlight:hover");
         if (!stillHovered) {
-            const event = new CustomEvent("hide-cluster-bubbles");
-            document.dispatchEvent(event);
+          const event = new CustomEvent("hide-cluster-bubbles");
+          document.dispatchEvent(event);
         }
       }, 50);
     });
