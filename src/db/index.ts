@@ -2,10 +2,8 @@ import Dexie, { type Table } from "dexie";
 
 export interface NoteAnchor {
   xpath: string;
-  text: string;
-  quote: string;
-  prefix: string;
-  suffix: string;
+  truncatedQuote: string;
+  compressedQuote: Uint8Array;
   color: string;
   style: string;
 }
@@ -55,6 +53,11 @@ export class HighlightNoteDB extends Dexie {
     this.version(5).stores({
       notes:
         "id, url, normalizedUrl, createdAt, updatedAt, isDeleted, *content.tags, content.text, anchor.quote",
+      pages: "normalizedUrl, lastVisit, *tags",
+    });
+    this.version(6).stores({
+      notes:
+        "id, url, normalizedUrl, createdAt, updatedAt, isDeleted, *content.tags, content.text, anchor.truncatedQuote",
       pages: "normalizedUrl, lastVisit, *tags",
     });
   }

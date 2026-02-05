@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import DOMPurify from "dompurify";
 import MarkdownIt from "markdown-it";
 import { Note } from "../db";
 import { X } from "lucide-react";
 import { CloudAIService, ChatMessage } from "../services/ai/cloud";
 import { useSettings } from "../utils/settings";
+import * as pako from "pako";
 
 interface AIChatModalProps {
   note: Note;
@@ -17,6 +18,7 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
   const [query, setQuery] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [settings] = useSettings();
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -27,28 +29,49 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
     }
   }, [chatHistory]);
 
+  const decompressedQuote = useMemo(() => {
+    if (!note.anchor.compressedQuote) return "";
+    try {
+      const decompressed = pako.inflate(note.anchor.compressedQuote, {
+        to: "string",
+      });
+      return decompressed;
+    } catch (error) {
+      console.error("Failed to decompress note quote:", error);
+      return "";
+    }
+  }, [note.anchor.compressedQuote]);
+
   const handleAskAI = async () => {
     if (!settings.apiKey || !query.trim()) return;
 
-    const newHistory: ChatMessage[] = [
-      ...chatHistory,
-      { sender: "user", text: query },
-    ];
-    setChatHistory(newHistory);
-    setQuery("");
+    if (!error) {
+      const newHistory: ChatMessage[] = [
+        ...chatHistory,
+        { sender: "user", text: query },
+      ];
+      setChatHistory(newHistory);
+    }
     setIsLoading(true);
+    setError(null);
 
     try {
-      const res = await CloudAIService.ask(note.anchor.quote, newHistory);
+      const res = await CloudAIService.ask(decompressedQuote, [
+        ...chatHistory,
+        { sender: "user", text: query },
+      ]);
       const aiResponse: ChatMessage = { sender: "ai", text: res };
-      setChatHistory([...newHistory, aiResponse]);
-    } catch (error) {
-      console.error("AI request failed:", error);
-      const errorResponse: ChatMessage = {
-        sender: "ai",
-        text: "Sorry, I encountered an error.",
-      };
-      setChatHistory([...newHistory, errorResponse]);
+      setChatHistory([
+        ...chatHistory,
+        { sender: "user", text: query },
+        aiResponse,
+      ]);
+      setQuery("");
+    } catch (err) {
+      console.error("AI request failed:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +102,7 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
             overflow: "hidden",
           }}
         >
-          Context: "{note.anchor.quote}"
+          Context: "{note.anchor.truncatedQuote}"
         </p>
         <div
           ref={chatContainerRef}
@@ -112,6 +135,17 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
             </div>
           )}
         </div>
+        {error && (
+          <div className="text-red-500 text-sm mb-2 text-center">
+            <p>Error: {error}</p>
+            <button
+              onClick={handleAskAI}
+              className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <div className="flex">
           <textarea
             value={query}
@@ -124,12 +158,12 @@ export function AIChatModal({ note, onClose }: AIChatModalProps) {
             }}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             placeholder="Your question..."
-            disabled={isLoading}
+            disabled={isLoading || !!error}
           />
           <button
             onClick={handleAskAI}
             className="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-            disabled={isLoading}
+            disabled={isLoading || !!error}
           >
             Send
           </button>

@@ -2,6 +2,11 @@ import axios from "axios";
 
 const cache = new Map<string, string[]>();
 
+interface Model {
+  id: string;
+  name: string;
+}
+
 export async function getOpenAIModels(apiKey: string): Promise<string[]> {
   if (cache.has(apiKey)) {
     return cache.get(apiKey)!;
@@ -13,7 +18,7 @@ export async function getOpenAIModels(apiKey: string): Promise<string[]> {
       },
     });
     const models = response.data.data
-      .map((model: any) => model.id)
+      .map((model: Model) => model.id)
       .filter((name: string) => name.startsWith("gpt"))
       .sort();
     cache.set(apiKey, models);
@@ -32,7 +37,7 @@ export async function getGoogleGenAIModels(apiKey: string): Promise<string[]> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
     const response = await axios.get(url);
     const models = response.data.models
-      .map((model: any) => model.name.replace("models/", ""))
+      .map((model: Model) => model.name.replace("models/", ""))
       .filter((name: string) => name.startsWith("gemini"))
       .sort();
     cache.set(apiKey, models);
@@ -55,7 +60,7 @@ export async function getAnthropicModels(apiKey: string): Promise<string[]> {
       },
     });
     const models = response.data.data
-      .map((model: any) => model.id)
+      .map((model: Model) => model.id)
       .filter((name: string) => name.startsWith("claude"))
       .sort();
     cache.set(apiKey, models);

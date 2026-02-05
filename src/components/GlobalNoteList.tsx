@@ -1,8 +1,10 @@
 import { Virtuoso } from "react-virtuoso";
+import * as pako from "pako";
 import { useAllNotes } from "../hooks/useAllNotes";
 import { Note } from "../db";
 import { sendMessage } from "@/utils/messaging";
 import DOMPurify from "dompurify";
+import { useMemo } from "react";
 
 const GlobalNoteListItem = ({ note }: { note: Note }) => {
   const handleClick = () => {
@@ -14,6 +16,19 @@ const GlobalNoteListItem = ({ note }: { note: Note }) => {
       },
     });
   };
+
+  const decompressedQuote = useMemo(() => {
+    if (!note.anchor.compressedQuote) return "";
+    try {
+      const decompressed = pako.inflate(note.anchor.compressedQuote, {
+        to: "string",
+      });
+      return decompressed;
+    } catch (error) {
+      console.error("Failed to decompress note quote:", error);
+      return "";
+    }
+  }, [note.anchor.compressedQuote]);
 
   const sanitizedHtml = DOMPurify.sanitize(note.content.html);
 
@@ -34,7 +49,7 @@ const GlobalNoteListItem = ({ note }: { note: Note }) => {
           overflow: "hidden",
         }}
       >
-        {note.anchor.quote}
+        {decompressedQuote}
       </div>
       <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
       <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -49,6 +64,14 @@ export const GlobalNoteList = ({ query }: { query?: string }) => {
 
   if (!notes) {
     return <div>Loading...</div>;
+  }
+
+  if (notes.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        <p>This is a list of all your notes from all pages.</p>
+      </div>
+    );
   }
 
   return (

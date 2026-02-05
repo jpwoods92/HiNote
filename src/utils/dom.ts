@@ -135,22 +135,14 @@ function fallbackHighlight(
 
 /**
  * Locates a Range based on text context (Fuzzy Matching).
- * Searches for `prefix + text + suffix` in the document body.
- */
-/**
- * Locates a Range based on text context (Fuzzy Matching).
  * This function is more robust than a simple innerText.indexOf search.
  * It walks the DOM text nodes to find a match.
  *
  * @param text The exact text of the highlight.
- * @param prefix The ~30 chars of text content before the highlight.
- * @param suffix The ~30 chars of text content after the highlight.
  * @param scope An optional element to limit the search to. Defaults to document.body.
  */
 export function findRangeByFuzzyMatch(
   text: string,
-  prefix: string,
-  suffix: string,
   scope: Node | null = document.body,
 ): Range | null {
   if (!scope) scope = document.body;
@@ -163,102 +155,72 @@ export function findRangeByFuzzyMatch(
     currentNode = walker.nextNode();
   }
 
-  // First, try a high-confidence match with prefix, text, and suffix
-  for (let i = 0; i < allTextNodes.length; i++) {
-    const node = allTextNodes[i];
-    const textContent = node.textContent || "";
+  const fullText = allTextNodes.map((node) => node.textContent).join("");
+  let startIndex = fullText.indexOf(text);
 
-    const fullSearchString = prefix + text + suffix;
-    const index = textContent.indexOf(fullSearchString);
+  // If the exact text is not found, try a more lenient search
+  if (startIndex === -1) {
+    // This is a common issue: saved text has different whitespace than live DOM.
+    // A simple yet effective strategy is to search for a trimmed version.
+    const trimmedText = text.trim();
+    startIndex = fullText.indexOf(trimmedText);
 
-    if (index !== -1) {
-      const range = document.createRange();
-      range.setStart(node, index + prefix.length);
-      range.setEnd(node, index + prefix.length + text.length);
-      // Ensure the text actually matches what we expect
-      if (range.toString().trim() === text.trim()) {
-        return range;
+    if (startIndex === -1) {
+      // Even more lenient: remove all whitespace. This can be risky but
+      // might be necessary for some sites.
+      const noSpaceText = text.replace(/\s+/g, "");
+      const noSpaceFullText = fullText.replace(/\s+/g, "");
+      const noSpaceIndex = noSpaceFullText.indexOf(noSpaceText);
+
+      if (noSpaceIndex === -1) {
+        return null;
       }
-    }
-  }
 
-  // Fallback 1: Search for [prefix + text] or [text + suffix] spanning adjacent nodes
-  for (let i = 0; i < allTextNodes.length; i++) {
-    const node1 = allTextNodes[i];
-    const node2 = allTextNodes[i + 1];
-
-    if (node1 && node2) {
-      const combinedText =
-        (node1.textContent || "") + (node2.textContent || "");
-
-      // Case a: prefix + text
-      let index = combinedText.indexOf(prefix + text);
-      if (
-        index !== -1 &&
-        (node1.textContent || "").endsWith(prefix + text.substring(0, 1))
-      ) {
-        const range = document.createRange();
-        const startOffset = (node1.textContent || "").lastIndexOf(prefix);
-        if (startOffset !== -1) {
-          range.setStart(node1, startOffset + prefix.length);
-          range.setEnd(
-            node2,
-            text.length -
-              (node1.textContent.length - (startOffset + prefix.length)),
-          );
-          if (range.toString().trim() === text.trim()) return range;
+      // This is tricky: we have to map the no-space index back to the
+      // original fullText index.
+      let fullTextIndex = 0;
+      let noSpaceCount = 0;
+      while (fullTextIndex < fullText.length && noSpaceCount < noSpaceIndex) {
+        if (fullText[fullTextIndex].match(/\s/) === null) {
+          noSpaceCount++;
         }
+        fullTextIndex++;
       }
-
-      // Case b: text + suffix
-      index = combinedText.indexOf(text + suffix);
-      if (
-        index !== -1 &&
-        (node1.textContent || "").endsWith(text.substring(0, 1))
-      ) {
-        const range = document.createRange();
-        range.setStart(node1, index);
-        const endOffset =
-          (text + suffix).length - (node1.textContent.length - index);
-        range.setEnd(node2, endOffset - suffix.length);
-        if (range.toString().trim() === text.trim()) return range;
-      }
+      startIndex = fullTextIndex;
     }
   }
 
-  // Fallback 2: Find just the text itself
-  for (let i = 0; i < allTextNodes.length; i++) {
-    const node = allTextNodes[i];
-    const textContent = node.textContent || "";
-    const index = textContent.indexOf(text);
+  const endIndex = startIndex + text.length;
 
-    if (index !== -1) {
-      const range = document.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + text.length);
-      // Final check: does the text in the new range match?
-      if (range.toString().trim() === text.trim()) {
-        return range;
-      }
+  let startNode: Text | undefined, endNode: Text | undefined;
+  let startOffset = 0,
+    endOffset = 0;
+  let currentIndex = 0;
+
+  for (const node of allTextNodes) {
+    const nodeLength = node.textContent?.length || 0;
+    if (!startNode && startIndex < currentIndex + nodeLength) {
+      startNode = node;
+      startOffset = startIndex - currentIndex;
+    }
+    if (!endNode && endIndex <= currentIndex + nodeLength) {
+      endNode = node;
+      endOffset = endIndex - currentIndex;
+      break;
+    }
+    currentIndex += nodeLength;
+  }
+
+  if (startNode && endNode) {
+    const range = document.createRange();
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+
+    // Final validation
+    if (range.toString().trim() === text.trim()) {
+      return range;
     }
   }
 
   return null;
-}
-
-export function getContext(
-  range: Range,
-  length: number = 30,
-): { prefix: string; suffix: string } {
-  const preRange = document.createRange();
-  preRange.setStartBefore(document.body);
-  preRange.setEnd(range.startContainer, range.startOffset);
-  const prefix = preRange.toString().slice(-length);
-
-  const postRange = document.createRange();
-  postRange.setStart(range.endContainer, range.endOffset);
-  postRange.setEndAfter(document.body);
-  const suffix = postRange.toString().slice(0, length);
-
-  return { prefix, suffix };
 }

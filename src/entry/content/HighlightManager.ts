@@ -1,4 +1,5 @@
 import { type Note } from "../../db";
+import * as pako from "pako";
 import {
   onMessage,
   sendMessage,
@@ -16,7 +17,6 @@ import {
   getNodeByXPath,
   highlightRange as highlightRangeUtil,
   findRangeByFuzzyMatch,
-  getContext,
 } from "../../utils/dom";
 import { eventBus } from "../../utils/eventBus";
 import { Settings } from "../../utils/settings";
@@ -121,7 +121,6 @@ export class HighlightManager {
     if (!text.trim()) return;
 
     const id = crypto.randomUUID();
-    const { prefix, suffix } = getContext(targetRange);
     const xpath = getXPath(targetRange.startContainer);
     const now = Date.now();
     const currentUrl = window.location.href;
@@ -134,10 +133,8 @@ export class HighlightManager {
       updatedAt: now,
       anchor: {
         xpath,
-        text,
-        quote: text,
-        prefix,
-        suffix,
+        truncatedQuote: text.substring(0, 1000),
+        compressedQuote: pako.deflate(text),
         color,
         style: "solid",
       },
@@ -182,23 +179,19 @@ export class HighlightManager {
 
     for (const note of notes) {
       let range: Range | null = null;
+      const decompressedQuote = pako.inflate(note.anchor.compressedQuote, {
+        to: "string",
+      });
 
       // Attempt 1: Scoped Fuzzy Match (High accuracy)
       // Try to find the highlight near its original XPath location first.
       const startNode = getNodeByXPath(note.anchor.xpath);
-      range = findRangeByFuzzyMatch(
-        note.anchor.text,
-        note.anchor.prefix,
-        note.anchor.suffix,
-        startNode,
-      );
+      range = findRangeByFuzzyMatch(decompressedQuote, startNode);
 
       // Attempt 2: Global Fuzzy Match (Fallback for changed DOM)
       if (!range) {
         range = findRangeByFuzzyMatch(
-          note.anchor.text,
-          note.anchor.prefix,
-          note.anchor.suffix,
+          decompressedQuote,
           null, // Search the whole document body
         );
       }
@@ -215,7 +208,7 @@ export class HighlightManager {
           });
         }
       } else {
-        console.warn("Orphaned Note:", note.id, note.anchor.text);
+        console.warn("Orphaned Note:", note.id, decompressedQuote);
         if (!note.isOrphaned) {
           void sendMessage({
             type: "UPDATE_NOTE_STATUS",
@@ -309,15 +302,12 @@ export class HighlightManager {
         const range = selection.getRangeAt(0);
         const text = range.toString();
         if (text.trim()) {
-          const { prefix, suffix } = getContext(range);
           const xpath = getXPath(range.startContainer);
           const newAnchor = {
             ...note.anchor,
             xpath,
-            text,
-            quote: text,
-            prefix,
-            suffix,
+            truncatedQuote: text.substring(0, 1000),
+            compressedQuote: pako.deflate(text),
           };
           await sendMessage({
             type: "UPDATE_NOTE_ANCHOR",

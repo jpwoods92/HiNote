@@ -11,10 +11,11 @@ import { XCircle } from "lucide-react";
 interface SearchBarProps {
   onResults: (results: Note[]) => void;
   onQueryChange: (query: string) => void;
+  url?: string;
 }
 
 export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
-  ({ onResults, onQueryChange }, ref) => {
+  ({ onResults, onQueryChange, url }, ref) => {
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +27,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
       const newQuery = e.target.value;
       setQuery(newQuery);
       onQueryChange(newQuery);
-      const results = await searchNotes(newQuery);
+      const results = await searchNotes(newQuery, url);
       onResults(results);
     };
 

@@ -7,6 +7,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { Note } from "@/db";
 import { SearchResults } from "@/components/SearchResults";
 import clsx from "clsx";
+import { useCurrentTab } from "@/hooks/useCurrentTab";
 
 const SettingsPage = lazy(() =>
   import("@/components/SettingsPage").then((module) => ({
@@ -24,6 +25,7 @@ function App() {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const searchBarRef = useRef<HTMLInputElement>(null);
+  const { tab: currentTab } = useCurrentTab();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -75,6 +77,7 @@ function App() {
           ref={searchBarRef}
           onResults={handleResults}
           onQueryChange={handleQueryChange}
+          url={view === "notes" ? currentTab?.url : undefined}
         />
         <button onClick={handleSettingsClick} className="p-2">
           <svg

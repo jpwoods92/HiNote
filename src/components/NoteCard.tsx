@@ -1,4 +1,5 @@
 import { useMemo, useState, lazy, Suspense } from "react";
+import * as pako from "pako";
 import { formatDistanceToNow } from "date-fns";
 import DOMPurify from "dompurify";
 import { Note } from "../db";
@@ -60,6 +61,19 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
     setIsEditing(true);
   };
 
+  const decompressedQuote = useMemo(() => {
+    if (!note.anchor.compressedQuote) return "";
+    try {
+      const decompressed = pako.inflate(note.anchor.compressedQuote, {
+        to: "string",
+      });
+      return decompressed;
+    } catch (error) {
+      console.error("Failed to decompress note quote:", error);
+      return "";
+    }
+  }, [note.anchor.compressedQuote]);
+
   const sanitizedHtml = DOMPurify.sanitize(note.content.html);
 
   const hasTextContent = useMemo(
@@ -113,7 +127,7 @@ export function NoteCard({ note, tabId }: NoteCardProps) {
           overflow: "hidden",
         }}
       >
-        {note.anchor.quote}
+        {decompressedQuote}
       </div>
       <div className="mt-2 text-gray-700 dark:text-gray-300">
         {isEditing ? (
