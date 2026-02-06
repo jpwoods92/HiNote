@@ -1,5 +1,5 @@
 {
-  "name": "click-note",
+  "name": "hinote",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:chrome": "vite build",
-    "build:firefox": "tsc -b && vite build && shx cp public/manifests/manifest.firefox.json dist/manifest.json",
+    "build:firefox": "vite build && shx cp public/manifests/manifest.firefox.json dist/manifest.json",
     "lint": "eslint --fix .",
     "format": "prettier --write .",
     "preview": "vite preview",

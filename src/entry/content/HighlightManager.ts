@@ -16,13 +16,18 @@ import {
   getXPath,
   getNodeByXPath,
   highlightRange as highlightRangeUtil,
-  findRangeByFuzzyMatch,
 } from "../../utils/dom";
+// @ts-expect-error cannot resolve unknown import error
+import MatcherWorker from "../../workers/matcher.worker?worker&inline";
 import { eventBus } from "../../utils/eventBus";
 import { Settings } from "../../utils/settings";
 
 export class HighlightManager {
+  private worker: Worker;
+  private currentPageTextNodes: { path: string; text: string | null }[] = [];
+
   constructor() {
+    this.worker = new MatcherWorker();
     void this.initialize();
   }
 
@@ -72,6 +77,13 @@ export class HighlightManager {
         }
       },
     );
+
+    this.worker.onmessage = (event) => {
+      const { type, payload } = event.data;
+      if (type === "SCAN_COMPLETE") {
+        this.handleScanComplete(payload);
+      }
+    };
 
     // Apply initial settings
     try {
@@ -167,6 +179,115 @@ export class HighlightManager {
     console.log("Highlight saved:", id);
   }
 
+  private serializePage() {
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+    );
+    const textNodes = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      // We only care about non-empty text nodes
+      if (currentNode.textContent?.trim()) {
+        textNodes.push({
+          path: getXPath(currentNode),
+          text: currentNode.textContent,
+        });
+      }
+      currentNode = walker.nextNode();
+    }
+    return textNodes;
+  }
+
+  private handleScanComplete({
+    matched,
+    orphaned,
+  }: {
+    matched: {
+      note: Note;
+      match: {
+        startNodeIndex: number;
+        startOffset: number;
+        endNodeIndex: number;
+        endOffset: number;
+      };
+    }[];
+    orphaned: Note[];
+  }) {
+    for (const item of matched) {
+      const { note, match } = item;
+      const { startNodeIndex, startOffset, endNodeIndex, endOffset } = match;
+
+      if (startNodeIndex === -1 || endNodeIndex === -1) {
+        if (!note.isOrphaned) {
+          void sendMessage({
+            type: "UPDATE_NOTE_STATUS",
+            payload: { id: note.id, isOrphaned: true },
+          });
+        }
+        continue;
+      }
+
+      const startNode = getNodeByXPath(
+        this.currentPageTextNodes[startNodeIndex].path,
+      );
+      const endNode = getNodeByXPath(
+        this.currentPageTextNodes[endNodeIndex].path,
+      );
+
+      if (startNode && endNode) {
+        // Race condition check: The DOM might have changed since we scanned it.
+        // Verify that the offsets are still valid.
+        if (
+          startOffset > (startNode.textContent?.length ?? 0) ||
+          endOffset > (endNode.textContent?.length ?? 0)
+        ) {
+          if (!note.isOrphaned) {
+            void sendMessage({
+              type: "UPDATE_NOTE_STATUS",
+              payload: { id: note.id, isOrphaned: true },
+            });
+          }
+          continue;
+        }
+
+        const range = document.createRange();
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+
+        const wrappers = highlightRangeUtil(range, note.id, note.anchor.color);
+        wrappers.forEach((wrapper) => {
+          this.addHighlightEventListeners(wrapper, note.id);
+        });
+
+        if (note.isOrphaned) {
+          void sendMessage({
+            type: "UPDATE_NOTE_STATUS",
+            payload: { id: note.id, isOrphaned: false },
+          });
+        }
+      } else {
+        // This can happen if the DOM changed between serialization and now.
+        // We'll treat it as an orphan for now.
+        if (!note.isOrphaned) {
+          void sendMessage({
+            type: "UPDATE_NOTE_STATUS",
+            payload: { id: note.id, isOrphaned: true },
+          });
+        }
+      }
+    }
+
+    for (const note of orphaned) {
+      if (!note.isOrphaned) {
+        void sendMessage({
+          type: "UPDATE_NOTE_STATUS",
+          payload: { id: note.id, isOrphaned: true },
+        });
+      }
+    }
+  }
+
   /**
    * Restores highlights for the current URL from IndexedDB.
    */
@@ -177,46 +298,26 @@ export class HighlightManager {
       payload: { url: currentUrl },
     });
 
-    for (const note of notes) {
-      let range: Range | null = null;
-      const decompressedQuote = pako.inflate(note.anchor.compressedQuote, {
-        to: "string",
-      });
+    if (notes.length === 0) return;
 
-      // Attempt 1: Scoped Fuzzy Match (High accuracy)
-      // Try to find the highlight near its original XPath location first.
-      const startNode = getNodeByXPath(note.anchor.xpath);
-      range = findRangeByFuzzyMatch(decompressedQuote, startNode);
+    this.currentPageTextNodes = this.serializePage();
+    const notesWithDecompressedQuotes = notes.map((note) => ({
+      ...note,
+      anchor: {
+        ...note.anchor,
+        decompressedQuote: pako.inflate(note.anchor.compressedQuote, {
+          to: "string",
+        }),
+      },
+    }));
 
-      // Attempt 2: Global Fuzzy Match (Fallback for changed DOM)
-      if (!range) {
-        range = findRangeByFuzzyMatch(
-          decompressedQuote,
-          null, // Search the whole document body
-        );
-      }
-
-      if (range) {
-        const wrappers = highlightRangeUtil(range, note.id, note.anchor.color);
-        wrappers.forEach((wrapper) => {
-          this.addHighlightEventListeners(wrapper, note.id);
-        });
-        if (note.isOrphaned) {
-          void sendMessage({
-            type: "UPDATE_NOTE_STATUS",
-            payload: { id: note.id, isOrphaned: false },
-          });
-        }
-      } else {
-        console.warn("Orphaned Note:", note.id, decompressedQuote);
-        if (!note.isOrphaned) {
-          void sendMessage({
-            type: "UPDATE_NOTE_STATUS",
-            payload: { id: note.id, isOrphaned: true },
-          });
-        }
-      }
-    }
+    this.worker.postMessage({
+      type: "SCAN_PAGE",
+      payload: {
+        notes: notesWithDecompressedQuotes,
+        textNodes: this.currentPageTextNodes,
+      },
+    });
   }
 
   /**

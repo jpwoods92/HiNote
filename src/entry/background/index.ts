@@ -15,14 +15,12 @@ import { normalizeUrl } from "@/utils/url";
 
 browser.runtime.onInstalled.addListener(() => {
   browser.contextMenus.create({
-    id: "click-note-context-menu",
+    id: "hinote-context-menu",
     title: "Add Note",
     contexts: ["selection", "page"],
   });
 
-  // Check if sidePanel API is available before calling it.
-  // This prevents crashes in Firefox or environments where sidePanel is undefined.
-  if (browser.sidePanel && browser.sidePanel.setPanelBehavior) {
+  if (browser.sidePanel?.setPanelBehavior) {
     void browser.sidePanel.setPanelBehavior({
       openPanelOnActionClick: true,
     });

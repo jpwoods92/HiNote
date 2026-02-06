@@ -6,6 +6,7 @@ import {
   getGoogleGenAIModels,
   getAnthropicModels,
 } from "@/services/ai/models";
+import { exportData, importData } from "../utils/backup";
 
 export function SettingsPage({ onBack }: { onBack: () => void }) {
   const [settings, updateSettings] = useSettings();
@@ -97,6 +98,9 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
         <label htmlFor="opacity" className="block mb-2">
           Default Opacity: {Math.round(settings.defaultOpacity * 100)}%
         </label>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Controls the transparency of the note highlight.
+        </p>
         <input
           type="range"
           id="opacity"
@@ -111,6 +115,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <div className="mb-4">
         <h3 className="text-md font-bold mb-2">Color Palette</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Customize the colors available for highlighting. Click a color to
+          change it, or "x" to remove it. You can add up to 8 colors.
+        </p>
         <div className="grid grid-cols-4 gap-2">
           {settings.customPalette.map((color, index) => (
             <div key={index} className="relative">
@@ -143,6 +151,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <div>
         <h3 className="text-md font-bold mb-2">AI Provider</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Connect to a large language model to enable AI-powered features like
+          summarization and question answering within your notes.
+        </p>
         <div className="mb-2">
           <label htmlFor="aiProvider" className="block mb-1">
             Provider
@@ -204,6 +216,30 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           Keys are stored only on this device and communicate directly with the
           provider.
         </p>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-md font-bold mb-2 text-red-500">Danger Zone</h3>
+        <div className="border border-red-500 rounded-md p-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Full data backup and restore. Use this to save your data or move it
+            to another device.
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={exportData}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+            >
+              Export Backup
+            </button>
+            <button
+              onClick={importData}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+            >
+              Import Backup
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

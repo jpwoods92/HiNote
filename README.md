@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# HiNote - Your Local-First Web Highlighter & Knowledge Base
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+HiNote is a browser extension that acts as your personal, privacy-focused knowledge base. Effortlessly highlight text on any webpage, attach notes, and manage your insights locally. It's designed for researchers, students, and anyone who wants to build a personal library of web content without relying on cloud services.
 
-Currently, two official plugins are available:
+## Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Seamless Highlighting**: Create persistent highlights on any webpage with a simple text selection.
+- **Note Taking**: Attach rich-text notes to your highlights using a clean, Tiptap-powered editor.
+- **Local-First Storage**: All your data is stored securely on your own device in IndexedDB. You own your data.
+- **Powerful Side Panel**: A dedicated side panel provides a global view of all your notes, with search and filtering capabilities.
+- **AI-Powered Actions**: Connect your own OpenAI, Google Gemini, or Anthropic API keys to unlock AI features like summarization and question-answering for your notes. Your keys are stored locally and never leave your browser.
+- **Cross-Browser Support**: Works on both Google Chrome and Mozilla Firefox.
+- **Data Portability**: Full data export and import functionality, allowing you to back up or migrate your knowledge base.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework**: React with TypeScript
+- **Build Tool**: Vite with `@crxjs/vite-plugin` for streamlined extension development
+- **Database**: IndexedDB managed via Dexie.js
+- **Styling**: Tailwind CSS
+- **Rich Text Editor**: Tiptap
+- **AI Integration**: LangChain.js
+- **Cross-Browser APIs**: `webextension-polyfill`
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+To get started with development, clone the repository and install the dependencies.
 
-```js
-export default defineConfig([
-  globalIgnores(["dist"]),
-  {
-    files: ["**/*.{ts,tsx}"],
-    extends: [
-      // Other configs...
+```bash
+# Clone the repository
+git clone <repository-url>
+cd hinote
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+# Install dependencies
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from "eslint-plugin-react-x";
-import reactDom from "eslint-plugin-react-dom";
+To start the development server with hot-reloading for a better developer experience:
 
-export default defineConfig([
-  globalIgnores(["dist"]),
-  {
-    files: ["**/*.{ts,tsx}"],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs["recommended-typescript"],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```bash
+npm run dev
 ```
+
+Then, load the extension in your browser:
+
+1.  **Chrome**:
+    - Go to `chrome://extensions`
+    - Enable "Developer mode"
+    - Click "Load unpacked"
+    - Select the `dist` folder in the project directory.
+2.  **Firefox**:
+    - Go to `about:debugging`
+    - Click "This Firefox"
+    - Click "Load Temporary Add-on..."
+    - Select the `dist/manifest.json` file.
+
+The extension will automatically reload as you make changes to the code.
+
+## Building for Production
+
+To create an optimized production build of the extension, use the following commands.
+
+### For Google Chrome
+
+This command builds the extension in the `dist` directory, ready to be zipped and uploaded to the Chrome Web Store.
+
+```bash
+npm run build
+```
+
+_(Note: `npm run build:chrome` is also available and is an alias for `npm run build`)_
+
+### For Mozilla Firefox
+
+This command first runs the standard build and then overwrites the manifest with the Firefox-specific version (`manifest.firefox.json`).
+
+```bash
+npm run build:firefox
+```
+
+The output will be in the `dist` directory, ready for packaging and submission to the Firefox Add-ons store.

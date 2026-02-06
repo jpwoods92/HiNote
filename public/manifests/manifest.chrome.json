@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Highlight & Note",
+  "name": "HiNote",
   "version": "1.0.0",
-  "description": "Local-first knowledge management.",
+  "description": "Effortlessly highlight text on any webpage, add notes, and manage your knowledge locally. HiNote is your private, local-first tool for thought.",
   "permissions": [
     "contextMenus",
     "sidePanel",
@@ -16,7 +16,16 @@
     "default_path": "index.html"
   },
   "action": {
-    "default_title": "Open Side Panel"
+    "default_title": "Open Side Panel",
+    "default_icon": {
+      "48": "store_assets/HiNote-icon-48.png",
+      "128": "store_assets/HiNote-icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "store_assets/HiNote-icon-16.png",
+    "48": "store_assets/HiNote-icon-48.png",
+    "128": "store_assets/HiNote-icon-128.png"
   },
   "background": {
     "service_worker": "src/entry/background/index.ts",

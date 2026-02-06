@@ -1,19 +1,44 @@
 {
   "manifest_version": 3,
-  "name": "Highlight & Note",
+  "name": "HiNote",
   "version": "1.0.0",
   "description": "Local-first knowledge management.",
-  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"],
+  "permissions": [
+    "contextMenus",
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "unlimitedStorage"
+  ],
   "host_permissions": ["<all_urls>"],
   "sidebar_action": {
-    "default_panel": "sidepanel.html",
-    "default_title": "Highlight & Note",
-    "open_at_install": false
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "highlight-note@example.com",
-      "strict_min_version": "109.0"
+    "default_panel": "index.html",
+    "default_title": "HiNote",
+    "default_icon": {
+      "16": "store_assets/HiNote-icon-16.png",
+      "48": "store_assets/Hinote-icon-48.png"
     }
-  }
+  },
+  "action": {
+    "default_title": "HiNote",
+    "default_icon": {
+      "48": "store_assets/HiNote-icon-48.png",
+      "128": "store_assets/HiNote-icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "store_assets/HiNote-icon-16.png",
+    "48": "store_assets/HiNote-icon-48.png",
+    "128": "store_assets/HiNote-icon-128.png"
+  },
+  "background": {
+    "scripts": ["src/entry/background/index.ts"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/entry/content/index.tsx"]
+    }
+  ]
 }

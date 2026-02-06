@@ -2,36 +2,41 @@
  * Generates a simple XPath for a given node.
  */
 export function getXPath(node: Node): string {
-  if (node.nodeType !== Node.ELEMENT_NODE) {
-    return node.parentNode ? getXPath(node.parentNode) : "";
+  // Element nodes with an ID are a shortcut
+  if (node.nodeType === Node.ELEMENT_NODE && (node as Element).id) {
+    return `//*[@id="${(node as Element).id}"]`;
   }
 
-  const element = node as Element;
-  if (element.id && element.id !== "") {
-    return `//*[@id="${element.id}"]`;
+  // The body element is a standard base case
+  if (node === document.body) {
+    return "/html/body";
   }
 
-  if (element === document.body) return "/html/body";
-  if (!element.parentNode) return "";
+  // If there's no parent, we can't continue
+  if (!node.parentNode) {
+    return "";
+  }
 
-  const siblings = element.parentNode.childNodes;
-  let index = 0;
+  let ix = 1; // XPath indices are 1-based
+  let sibling = node.previousSibling;
 
-  for (let i = 0; i < siblings.length; i++) {
-    const sibling = siblings[i];
-    if (sibling === element) {
-      return `${getXPath(element.parentNode)}/${element.tagName.toLowerCase()}[${
-        index + 1
-      }]`;
-    }
+  while (sibling) {
+    // Check for siblings of the same type and tag name
     if (
-      sibling.nodeType === Node.ELEMENT_NODE &&
-      (sibling as Element).tagName === element.tagName
+      sibling.nodeType === node.nodeType &&
+      sibling.nodeName === node.nodeName
     ) {
-      index++;
+      ix++;
     }
+    sibling = sibling.previousSibling;
   }
-  return "";
+
+  const nodeName =
+    node.nodeName.toLowerCase() === "#text"
+      ? "text()"
+      : node.nodeName.toLowerCase();
+
+  return `${getXPath(node.parentNode)}/${nodeName}[${ix}]`;
 }
 
 /**
@@ -131,96 +136,4 @@ function fallbackHighlight(
     }
   }
   return highlights;
-}
-
-/**
- * Locates a Range based on text context (Fuzzy Matching).
- * This function is more robust than a simple innerText.indexOf search.
- * It walks the DOM text nodes to find a match.
- *
- * @param text The exact text of the highlight.
- * @param scope An optional element to limit the search to. Defaults to document.body.
- */
-export function findRangeByFuzzyMatch(
-  text: string,
-  scope: Node | null = document.body,
-): Range | null {
-  if (!scope) scope = document.body;
-
-  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
-  const allTextNodes: Text[] = [];
-  let currentNode = walker.nextNode();
-  while (currentNode) {
-    allTextNodes.push(currentNode as Text);
-    currentNode = walker.nextNode();
-  }
-
-  const fullText = allTextNodes.map((node) => node.textContent).join("");
-  let startIndex = fullText.indexOf(text);
-
-  // If the exact text is not found, try a more lenient search
-  if (startIndex === -1) {
-    // This is a common issue: saved text has different whitespace than live DOM.
-    // A simple yet effective strategy is to search for a trimmed version.
-    const trimmedText = text.trim();
-    startIndex = fullText.indexOf(trimmedText);
-
-    if (startIndex === -1) {
-      // Even more lenient: remove all whitespace. This can be risky but
-      // might be necessary for some sites.
-      const noSpaceText = text.replace(/\s+/g, "");
-      const noSpaceFullText = fullText.replace(/\s+/g, "");
-      const noSpaceIndex = noSpaceFullText.indexOf(noSpaceText);
-
-      if (noSpaceIndex === -1) {
-        return null;
-      }
-
-      // This is tricky: we have to map the no-space index back to the
-      // original fullText index.
-      let fullTextIndex = 0;
-      let noSpaceCount = 0;
-      while (fullTextIndex < fullText.length && noSpaceCount < noSpaceIndex) {
-        if (fullText[fullTextIndex].match(/\s/) === null) {
-          noSpaceCount++;
-        }
-        fullTextIndex++;
-      }
-      startIndex = fullTextIndex;
-    }
-  }
-
-  const endIndex = startIndex + text.length;
-
-  let startNode: Text | undefined, endNode: Text | undefined;
-  let startOffset = 0,
-    endOffset = 0;
-  let currentIndex = 0;
-
-  for (const node of allTextNodes) {
-    const nodeLength = node.textContent?.length || 0;
-    if (!startNode && startIndex < currentIndex + nodeLength) {
-      startNode = node;
-      startOffset = startIndex - currentIndex;
-    }
-    if (!endNode && endIndex <= currentIndex + nodeLength) {
-      endNode = node;
-      endOffset = endIndex - currentIndex;
-      break;
-    }
-    currentIndex += nodeLength;
-  }
-
-  if (startNode && endNode) {
-    const range = document.createRange();
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-
-    // Final validation
-    if (range.toString().trim() === text.trim()) {
-      return range;
-    }
-  }
-
-  return null;
 }

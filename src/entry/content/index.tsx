@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { FloatingHighlighter } from "./FloatingHighlighter";
 import "./styles.css";
 
-console.log("Highlight & Note Content Script Loaded");
+console.log("HiNote Content Script Loaded");
 
 // 1. Create a container for our React App
 const rootEl = document.createElement("div");

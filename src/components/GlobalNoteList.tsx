@@ -30,7 +30,14 @@ const GlobalNoteListItem = ({ note }: { note: Note }) => {
     }
   }, [note.anchor.compressedQuote]);
 
-  const sanitizedHtml = DOMPurify.sanitize(note.content.html);
+  const sanitizedHtml = DOMPurify.sanitize(note.content.html, {
+    ADD_ATTR: ["loading"],
+  });
+
+  const withLazyLoading = sanitizedHtml.replace(
+    /<img(?!.*?loading="lazy")/g,
+    '<img loading="lazy"',
+  );
 
   return (
     <div
@@ -51,7 +58,7 @@ const GlobalNoteListItem = ({ note }: { note: Note }) => {
       >
         {decompressedQuote}
       </div>
-      <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+      <div dangerouslySetInnerHTML={{ __html: withLazyLoading }} />
       <div className="text-xs text-gray-400 dark:text-gray-500">
         {new Date(note.createdAt).toLocaleString()}
       </div>
