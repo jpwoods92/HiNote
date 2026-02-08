@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HiNote",
   "version": "1.0.0",
-  "description": "Effortlessly highlight text on any webpage, add notes, and manage your knowledge locally. HiNote is your private, local-first tool for thought.",
+  "description": "HiNote is your private, local-first tool for thought.",
   "permissions": [
     "contextMenus",
     "activeTab",
