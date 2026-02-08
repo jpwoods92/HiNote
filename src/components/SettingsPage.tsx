@@ -241,6 +241,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           </div>
         </div>
       </div>
+
+      <div className="mt-8 text-center">
+        <a
+          href="https://buymeacoffee.com/jpwoods92"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600"
+        >
+          Buy Me a Coffee!
+        </a>
+      </div>
     </div>
   );
 }
