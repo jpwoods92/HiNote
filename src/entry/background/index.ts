@@ -27,6 +27,12 @@ browser.runtime.onInstalled.addListener(() => {
   }
 });
 
+if (browser.sidebarAction && !browser.sidePanel) {
+  browser.action.onClicked.addListener(() => {
+    void browser.sidebarAction.open();
+  });
+}
+
 onMessage(
   (
     message: Message<

@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:chrome": "vite build",
-    "build:firefox": "vite build && shx cp public/manifests/manifest.firefox.json dist/manifest.json",
+    "build": "cross-env BUILD_TARGET=chrome vite build",
+    "build:chrome": "cross-env BUILD_TARGET=chrome vite build",
+    "build:firefox": "cross-env BUILD_TARGET=firefox vite build",
     "lint": "eslint --fix .",
     "format": "prettier --write .",
     "preview": "vite preview",
@@ -52,7 +52,7 @@
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.23",
+    "@crxjs/vite-plugin": "^2.3.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/typography": "^0.5.19",
     "@types/chrome": "^0.1.36",
@@ -63,6 +63,7 @@
     "@types/webextension-polyfill": "^0.12.4",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

@@ -2,10 +2,9 @@
   "manifest_version": 3,
   "name": "HiNote",
   "version": "1.0.0",
-  "description": "Local-first knowledge management.",
+  "description": "Effortlessly highlight text on any webpage, add notes, and manage your knowledge locally. HiNote is your private, local-first tool for thought.",
   "permissions": [
     "contextMenus",
-    "sidePanel",
     "activeTab",
     "scripting",
     "storage",
@@ -16,26 +15,28 @@
     "default_panel": "index.html",
     "default_title": "HiNote",
     "default_icon": {
-      "32": "store_assets/HiNote-icon-32.png",
-      "48": "store_assets/Hinote-icon-48.png"
+      "32": "store_assets/HiNoteIcon-32.png",
+      "48": "store_assets/HiNoteIcon-48.png"
     }
   },
   "action": {
     "default_title": "HiNote",
     "default_icon": {
-      "48": "store_assets/HiNote-icon-48.png",
-      "32": "store_assets/HiNote-icon-32.png",
-      "128": "store_assets/HiNote-icon-128.png"
+      "16": "store_assets/HiNoteIcon-16.png",
+      "48": "store_assets/HiNoteIcon-48.png",
+      "32": "store_assets/HiNoteIcon-32.png",
+      "128": "store_assets/HiNoteIcon-128.png"
     }
   },
   "icons": {
-    "16": "store_assets/HiNote-icon-16.png",
-    "32": "store_assets/HiNote-icon-32.png",
-    "48": "store_assets/HiNote-icon-48.png",
-    "128": "store_assets/HiNote-icon-128.png"
+    "16": "store_assets/HiNoteIcon-16.png",
+    "32": "store_assets/HiNoteIcon-32.png",
+    "48": "store_assets/HiNoteIcon-48.png",
+    "128": "store_assets/HiNoteIcon-128.png"
   },
   "background": {
-    "scripts": ["src/entry/background/index.ts"]
+    "scripts": ["src/entry/background/index.ts"],
+    "type": "module"
   },
   "content_scripts": [
     {
