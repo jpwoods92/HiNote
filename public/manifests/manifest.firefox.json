@@ -3,13 +3,7 @@
   "name": "HiNote",
   "version": "1.0.0",
   "description": "HiNote is your private, local-first tool for thought.",
-  "permissions": [
-    "contextMenus",
-    "activeTab",
-    "scripting",
-    "storage",
-    "unlimitedStorage"
-  ],
+  "permissions": ["contextMenus", "activeTab", "storage", "unlimitedStorage"],
   "host_permissions": ["<all_urls>"],
   "sidebar_action": {
     "default_panel": "index.html",
