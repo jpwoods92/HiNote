@@ -40,7 +40,11 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "hinote@example.com"
+      "id": "hinote@example.com",
+      "data_collection_permissions": {
+        "description": "Required for Firefox submission. This extension is local-first and does not collect user data.",
+        "required": ["none"]
+      }
     }
   }
 }
