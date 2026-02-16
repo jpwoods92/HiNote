@@ -62,12 +62,12 @@ function App() {
   };
 
   const handleSettingsClick = () => {
-    setPreviousView(view);
+    setPreviousView(view || "notes");
     setView("settings");
   };
 
   const handleBackFromSettings = () => {
-    setView(previousView);
+    setView(previousView || "notes");
   };
 
   return (
