@@ -9,24 +9,24 @@
     "default_panel": "index.html",
     "default_title": "HiNote",
     "default_icon": {
-      "32": "store_assets/HiNoteIcon-32.png",
-      "48": "store_assets/HiNoteIcon-48.png"
+      "32": "store_assets/HiNoteIcon-bordered-32.png",
+      "48": "store_assets/HiNoteIcon-bordered-48.png"
     }
   },
   "action": {
     "default_title": "HiNote",
     "default_icon": {
-      "16": "store_assets/HiNoteIcon-16.png",
-      "48": "store_assets/HiNoteIcon-48.png",
-      "32": "store_assets/HiNoteIcon-32.png",
-      "128": "store_assets/HiNoteIcon-128.png"
+      "16": "store_assets/HiNoteIcon-bordered-16.png",
+      "48": "store_assets/HiNoteIcon-bordered-48.png",
+      "32": "store_assets/HiNoteIcon-bordered-32.png",
+      "128": "store_assets/HiNoteIcon-bordered-128.png"
     }
   },
   "icons": {
-    "16": "store_assets/HiNoteIcon-16.png",
-    "32": "store_assets/HiNoteIcon-32.png",
-    "48": "store_assets/HiNoteIcon-48.png",
-    "128": "store_assets/HiNoteIcon-128.png"
+    "16": "store_assets/HiNoteIcon-bordered-16.png",
+    "32": "store_assets/HiNoteIcon-bordered-32.png",
+    "48": "store_assets/HiNoteIcon-bordered-48.png",
+    "128": "store_assets/HiNoteIcon-bordered-128.png"
   },
   "background": {
     "scripts": ["src/entry/background/index.ts"],
